@@ -19,19 +19,36 @@ func OpenMP3File(path string) (io.ReadCloser, error) {
 func DecodeMP3Frame(r *bufio.Reader) {
 	var h MP3FrameHeader
 	if err := ReadHeader(&h, r); err != nil {
-		// handle error
+		fmt.Printf("failed to read MP3 frame header: %v\n", err)
 		return
 	}
 
-	if !ValidateCRC(&h, r) {
-		// handle CRC validation failure
-		return
-	}
+    if !h.ValidateCRC(r) {
+        fmt.Printf("CRC check failed for MP3 frame\n")
+        return
+    }
 
-	_, err := ReadSideInfo(&h, r)
+	sideInfoLen := GetSideInfoLength(&h)
+	sideInfo, err := ReadSideInfo(&h, r, sideInfoLen)
 	if err != nil {
-		// handle error
+		fmt.Printf("failed to read side info: %v\n", err)
 		return
 	}
 
+    frameLen, err := h.GetFrameLength()
+    if err != nil {
+        fmt.Printf("failed to calculate frame length: %v\n", err)
+        return
+    }
+    crcLen := 0
+    if h.HasCRC() {
+        crcLen = 2
+    }
+
+	mainDataLen := frameLen - 4 - sideInfoLen - crcLen
+	_, err = ReadMainData(r, sideInfo.MainDataBegin, mainDataLen)
+	if err != nil {
+		fmt.Printf("failed to read main data: %v\n", err)
+		return
+	}
 }
