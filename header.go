@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"os"
 )
 
@@ -14,8 +13,9 @@ type MP3Frame struct {
 	// version (1), protection (1), bitrate index(4), sample rate index(2),
 	// version=0 indicates MPEG2, version=1 indicates MPEG1
 	flag1 byte
-	// unused(5), padding (1), channel mode (2)
-	flag2 byte
+	// channel mode (2), mode extension (2), copyright (1), original (1), emphasis (2)
+	flag2   byte
+	padding bool
 	// CRC16 value read from the frame (if present)
 	crcValue [2]byte
 	// Bytes covered by MPEG audio CRC: header bytes 3-4 and Layer III side info
@@ -49,7 +49,7 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 			return err
 		}
 		// sync bit is 11 bits, check the last 3 bits to confirm
-		if b&0xE0 != 0xE0 {
+		if b&0b11100000 != 0b11100000 {
 			// back off one byte because it might be the start of the next frame or an ID3 tag
 			if err := reader.UnreadByte(); err != nil {
 				return err
@@ -57,22 +57,22 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 			continue
 		}
 		// version check
-		switch (b >> 3) & 0x03 {
+		switch (b >> 3) & 0b11 {
 		case 0b11: // MPEG Version 1.0
 			h.flag1 |= 1 << 7 // set msb of flag1 to indicate MPEG1
 		default:
 			// ignore MPEG Version 2/2.5 at this point
-			return fmt.Errorf("unsupported MPEG version %02x", (b>>3)&0x03)
+			return fmt.Errorf("unsupported MPEG version %02x", (b>>3)&0b11)
 		}
 		// at this time we only support Layer III
-		if (b >> 1 & 0x03) != 0x01 {
+		if (b >> 1 & 0b11) != 0b01 {
 			return fmt.Errorf("unsupported layer, only Layer III (MP3) is supported")
 		}
-		log.Printf("Found potential MP3 frame header: %02x %02x", 0xFF, b)
+		fmt.Printf("Found potential MP3 frame header: %02x %02x\n", 0xFF, b)
 		// read protection bit, 0 means CRC is present, 1 means no CRC
-		pBit := b & 0x01
+		pBit := b & 0b01
 		hasCRC := pBit == 0
-		log.Printf("Protection bit: %d (has CRC: %v)", pBit, hasCRC)
+		fmt.Printf("Protection bit: %d (has CRC: %v)\n", pBit, hasCRC)
 		h.flag1 |= pBit << 6 // set protection bit
 
 		b, err = reader.ReadByte()
@@ -83,37 +83,31 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 			h.crcTarget = make([]byte, 2)
 			h.crcTarget[0] = b
 		}
-		log.Printf("Bitrate index: %d", (b>>4)&0x0F)
-		bitrateIndex := (b >> 4) & 0x0F
-		if bitrateIndex == 0x0F {
+		fmt.Printf("Bitrate index: %d\n", (b>>4)&0b1111)
+		bitrateIndex := (b >> 4) & 0b1111
+		if bitrateIndex == 0b1111 {
 			return fmt.Errorf("invalid bitrate index: bad")
 		}
 		h.flag1 |= bitrateIndex << 2 // set bitrate index
 
-		sampleRateIndex := (b >> 2) & 0x03
-		if sampleRateIndex == 0x03 {
+		sampleRateIndex := (b >> 2) & 0b11
+		if sampleRateIndex == 0b11 {
 			return fmt.Errorf("invalid sample rate index: reserved")
 		}
 		h.flag1 |= sampleRateIndex // set sample rate index
 
-		h.flag2 |= ((b >> 1) & 0x01) << 1 // set padding bit
+		h.padding = ((b >> 1) & 0b01) == 1 // set padding
 
 		// the remaining one bit is private bit, we ignore it
 
-		b, err = reader.ReadByte()
+		h.flag2, err = reader.ReadByte()
 		if err != nil {
 			return err
 		}
-		log.Printf("Sample rate index: %d", (b>>2)&0x03)
+		fmt.Printf("Channel mode: %s\n", GetChannelMode(h))
 		if hasCRC {
-			h.crcTarget[1] = b
+			h.crcTarget[1] = h.flag2
 		}
-		// set channel mode
-		// 00 = Stereo, 01 = Joint stereo (Stereo), 10 = Dual channel (Stereo), 11 = Single channel (Mono)
-		h.flag2 |= (b >> 6) & 0x03
-		log.Printf("Channel mode: %02b", (b>>6)&0x03)
-
-		// TODO: Mode extension, copyright, original, emphasis bits are ignored for now
 
 		if hasCRC {
 			_, err := io.ReadFull(reader, h.crcValue[:])
@@ -129,41 +123,36 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 // TODO: read payload
 
 // Layer III frame length = (144 * Bitrate / SampleRate) + Padding
+// the magic number 144 is derived from 1152 samples per frame and 8 bits: (1152 samples/frame * 1 bit/sample) / 8 bits = 144 bytes per kbps
 func GetFrameLength(h *MP3Frame) (int, error) {
 	bitrateKbps, isFree := GetBitrateKbps(h)
 	if isFree {
 		return 0, fmt.Errorf("free bitrate frames are not supported")
 	}
 	sampleRate := GetSampleRate(h)
-	padding := GetPadding(h)
+	pad := 0
+	if Padding(h) {
+		pad = 1
+	}
 
-	frameLength := (144 * int(bitrateKbps*1000) / int(sampleRate)) + int(padding)
+	frameLength := (144 * int(bitrateKbps*1000) / int(sampleRate)) + pad
 	return frameLength, nil
 }
 
 func ValidateCRC(h *MP3Frame, reader *bufio.Reader) bool {
-	if !hasCRC(h) {
+	if !HasCRC(h) {
 		return true // no CRC to validate
 	}
 	return true // TODO: implement CRC16 validation
 }
 
-func hasCRC(h *MP3Frame) bool {
-	return (h.flag1 & (1 << 6)) == 0
-}
-
-// IsStereo does not distinguish between joint stereo and dual channel modes
-func isStereo(h *MP3Frame) bool {
-	return (h.flag2 & 0x03) != 0x03
-}
-
 // GetBitrate returns the bitrate in bps. If the frame uses free bitrate, returns (0, true)
 func GetBitrateKbps(h *MP3Frame) (uint16, bool) {
-	bitrateIndex := (h.flag1 >> 2) & 0x0F
+	bitrateIndex := (h.flag1 >> 2) & 0b1111
 	if bitrateIndex == 0 {
 		return 0, true // free bitrate
 	}
-	version := (h.flag1 >> 7) & 0x01
+	version := (h.flag1 >> 7) & 0b1
 	if version == 1 {
 		return V1L3_BITRATE_TABLE[bitrateIndex], false
 	} else {
@@ -172,8 +161,8 @@ func GetBitrateKbps(h *MP3Frame) (uint16, bool) {
 }
 
 func GetSampleRate(h *MP3Frame) uint16 {
-	sampleRateIndex := h.flag1 & 0x03
-	version := (h.flag1 >> 7) & 0x01
+	sampleRateIndex := h.flag1 & 0b11
+	version := (h.flag1 >> 7) & 0b1
 	if version == 1 {
 		return V1_SAMPLE_RATE_TABLE[sampleRateIndex]
 	} else {
@@ -181,6 +170,35 @@ func GetSampleRate(h *MP3Frame) uint16 {
 	}
 }
 
-func GetPadding(h *MP3Frame) uint8 {
-	return (h.flag2 >> 1) & 0x01
+// getter functions
+
+func HasCRC(h *MP3Frame) bool {
+	return (h.flag1 & (1 << 6)) == 0
+}
+
+func Padding(h *MP3Frame) bool {
+	return h.padding
+}
+
+func GetChannelMode(h *MP3Frame) ChannelMode {
+	return ChannelMode((h.flag2 >> 6) & 0b11)
+}
+
+func GetModeExtension(h *MP3Frame) byte {
+	if GetChannelMode(h) != ChannelModeJointStereo {
+		return 0
+	}
+	return (h.flag2 >> 4) & 0b11
+}
+
+func IsCopyrighted(h *MP3Frame) bool {
+	return ((h.flag2 >> 3) & 0b1) == 1
+}
+
+func IsOriginal(h *MP3Frame) bool {
+	return ((h.flag2 >> 2) & 0b1) == 1
+}
+
+func GetEmphasis(h *MP3Frame) byte {
+	return h.flag2 & 0b11
 }

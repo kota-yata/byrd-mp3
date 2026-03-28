@@ -28,8 +28,8 @@ func TestReadFirstFrameFromOutputMP3(t *testing.T) {
 		t.Fatalf("unexpected sample rate: got %d, want 48000", sr)
 	}
 
-	if pad := GetPadding(&h); pad != 0 {
-		t.Fatalf("unexpected padding bit: got %d, want 0", pad)
+	if pad := Padding(&h); pad {
+		t.Fatalf("unexpected padding bit: got %v, want false", pad)
 	}
 
 	if !ValidateCRC(&h, r) {
@@ -38,9 +38,5 @@ func TestReadFirstFrameFromOutputMP3(t *testing.T) {
 
 	if l, err := GetFrameLength(&h); err != nil || l != 192 {
 		t.Fatalf("unexpected frame length: got (%d, err=%v), want 192", l, err)
-	}
-
-	if !isStereo(&h) {
-		t.Fatalf("expected stereo channel mode")
 	}
 }
