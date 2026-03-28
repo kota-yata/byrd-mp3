@@ -1,17 +1,13 @@
 package byrd
 
+// Byrd only support MPEG-1 Layer III frames
+
 var (
 	V1L3_BITRATE_TABLE = [15]uint16{
 		0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
 	}
-	V2L3_BITRATE_TABLE = [15]uint16{
-		0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160,
-	}
 	V1_SAMPLE_RATE_TABLE = [3]uint16{
 		44100, 48000, 32000,
-	}
-	V2_SAMPLE_RATE_TABLE = [3]uint16{
-		22050, 24000, 16000,
 	}
 
 	// MP3 CRC16 Table (Generator Polynomial: 0x8005)
