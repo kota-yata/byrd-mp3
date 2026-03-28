@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 )
 
 type MP3Frame struct {
@@ -18,16 +17,8 @@ type MP3Frame struct {
 	padding bool
 	// CRC16 value read from the frame (if present)
 	crcValue [2]byte
-	// Bytes covered by MPEG audio CRC: header bytes 3-4 and Layer III side info
+	// Bytes covered by MPEG audio CRC: header bytes 3-4 and the whole Layer III side info
 	crcTarget []byte
-}
-
-func OpenMP3File(path string) (io.ReadCloser, error) {
-	ext := ".mp3"
-	if len(path) < len(ext) || path[len(path)-len(ext):] != ext {
-		return nil, fmt.Errorf("unsupported file format: %s", path)
-	}
-	return os.Open(path)
 }
 
 func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
@@ -109,6 +100,7 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 			h.crcTarget[1] = h.flag2
 		}
 
+		// if CRC is present, read 2 bytes after the header which is CRC value calculated on the sender side
 		if hasCRC {
 			_, err := io.ReadFull(reader, h.crcValue[:])
 			if err != nil {
@@ -123,7 +115,7 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 // TODO: read payload
 
 // Layer III frame length = (144 * Bitrate / SampleRate) + Padding
-// the magic number 144 is derived from 1152 samples per frame and 8 bits: (1152 samples/frame * 1 bit/sample) / 8 bits = 144 bytes per kbps
+// the magic number 144 is derived from 1152 samples per frame and 8 bits
 func GetFrameLength(h *MP3Frame) (int, error) {
 	bitrateKbps, isFree := GetBitrateKbps(h)
 	if isFree {
