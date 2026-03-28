@@ -15,40 +15,52 @@ func OpenMP3File(path string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-// read single MP3 frame
-func DecodeMP3Frame(r *bufio.Reader) {
+func DecodeMP3Frames(r *bufio.Reader) {
 	var h MP3FrameHeader
-	if err := ReadHeader(&h, r); err != nil {
-		fmt.Printf("failed to read MP3 frame header: %v\n", err)
-		return
-	}
+	var mainDataReservoir []byte
+	for {
+		h = MP3FrameHeader{} // reset frame state
+		if err := ReadHeader(&h, r); err != nil {
+			fmt.Printf("failed to read MP3 frame header: %v\n", err)
+			return
+		}
 
-	if !h.ValidateCRC(r) {
-		fmt.Printf("CRC check failed for MP3 frame\n")
-		return
-	}
+		if !h.ValidateCRC(r) {
+			fmt.Printf("CRC check failed for MP3 frame\n")
+			return
+		}
 
-	sideInfoLen := GetSideInfoLength(&h)
-	sideInfo, err := ReadSideInfo(&h, r, sideInfoLen)
-	if err != nil {
-		fmt.Printf("failed to read side info: %v\n", err)
-		return
-	}
+		sideInfoLen := GetSideInfoLength(&h)
+		sideInfo, err := ReadSideInfo(&h, r, sideInfoLen)
+		if err != nil {
+			fmt.Printf("failed to read side info: %v\n", err)
+			return
+		}
 
-	frameLen, err := h.GetFrameLength()
-	if err != nil {
-		fmt.Printf("failed to calculate frame length: %v\n", err)
-		return
-	}
-	crcLen := 0
-	if h.HasCRC() {
-		crcLen = 2
-	}
+		frameLen, err := h.GetFrameLength()
+		if err != nil {
+			fmt.Printf("failed to calculate frame length: %v\n", err)
+			return
+		}
+		crcLen := 0
+		if h.HasCRC() {
+			crcLen = 2
+		}
 
-	mainDataLen := frameLen - 4 - sideInfoLen - crcLen
-	_, err = ReadMainData(r, sideInfo.MainDataBegin, mainDataLen)
-	if err != nil {
-		fmt.Printf("failed to read main data: %v\n", err)
-		return
+		mainDataLen := frameLen - 4 - sideInfoLen - crcLen
+		_, err = ReadMainData(r, sideInfo.MainDataBegin, mainDataLen, &mainDataReservoir)
+		if err != nil {
+			fmt.Printf("failed to read main data: %v\n", err)
+			return
+		}
+
+		// check stream end
+		if _, err := r.Peek(1); err != nil {
+			if err == io.EOF {
+				break
+			}
+			fmt.Printf("failed to check next frame: %v\n", err)
+			return
+		}
 	}
 }
