@@ -23,10 +23,10 @@ func DecodeMP3Frame(r *bufio.Reader) {
 		return
 	}
 
-    if !h.ValidateCRC(r) {
-        fmt.Printf("CRC check failed for MP3 frame\n")
-        return
-    }
+	if !h.ValidateCRC(r) {
+		fmt.Printf("CRC check failed for MP3 frame\n")
+		return
+	}
 
 	sideInfoLen := GetSideInfoLength(&h)
 	sideInfo, err := ReadSideInfo(&h, r, sideInfoLen)
@@ -35,15 +35,15 @@ func DecodeMP3Frame(r *bufio.Reader) {
 		return
 	}
 
-    frameLen, err := h.GetFrameLength()
-    if err != nil {
-        fmt.Printf("failed to calculate frame length: %v\n", err)
-        return
-    }
-    crcLen := 0
-    if h.HasCRC() {
-        crcLen = 2
-    }
+	frameLen, err := h.GetFrameLength()
+	if err != nil {
+		fmt.Printf("failed to calculate frame length: %v\n", err)
+		return
+	}
+	crcLen := 0
+	if h.HasCRC() {
+		crcLen = 2
+	}
 
 	mainDataLen := frameLen - 4 - sideInfoLen - crcLen
 	_, err = ReadMainData(r, sideInfo.MainDataBegin, mainDataLen)

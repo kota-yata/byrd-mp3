@@ -7,8 +7,8 @@ import (
 )
 
 type SideInfo struct {
-	MainDataBegin uint16
-	SCFSI         [2][4]byte
+	MainDataBegin uint16     // start of the main data to jump back to the previous frames if not 0
+	SCFSI         [2][4]byte // bits to indicate if scalefactors are reused from previous granule for each band in each channel
 	Granule       [2][2]GranuleChannelInfo
 }
 
@@ -27,10 +27,10 @@ type GranuleChannelInfo struct {
 }
 
 func GetSideInfoLength(h *MP3FrameHeader) int {
-    if h.GetChannelMode() == ChannelModeMono {
-        return 17
-    }
-    return 32
+	if h.GetChannelMode() == ChannelModeMono {
+		return 17
+	}
+	return 32
 }
 
 func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) {
@@ -40,9 +40,9 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 		return nil, err
 	}
 
-    if h.HasCRC() {
-        h.crcTarget = append(h.crcTarget, buf...)
-    }
+	if h.HasCRC() {
+		h.crcTarget = append(h.crcTarget, buf...)
+	}
 
 	br := NewBitReader(buf)
 	si := &SideInfo{}
@@ -54,12 +54,12 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 	si.MainDataBegin = uint16(v)
 
 	channels := 2
-    if h.GetChannelMode() == ChannelModeMono {
-        channels = 1
-        _, err = br.ReadBits(5) // read and ignore private_bits
-    } else {
-        _, err = br.ReadBits(3) // read and ignore private_bits
-    }
+	if h.GetChannelMode() == ChannelModeMono {
+		channels = 1
+		_, err = br.ReadBits(5) // read and ignore private_bits
+	} else {
+		_, err = br.ReadBits(3) // read and ignore private_bits
+	}
 	if err != nil {
 		return nil, err
 	}
