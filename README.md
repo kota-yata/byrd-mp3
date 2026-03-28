@@ -1,2 +1,2 @@
 ## Byrd
-MP3 decoder in Go. No dependency to third-party libraries.
+MP3 (MPEG-1 Layer 3) decoder in Go. No dependency to third-party libraries.
