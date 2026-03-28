@@ -152,22 +152,12 @@ func GetBitrateKbps(h *MP3Frame) (uint16, bool) {
 	if bitrateIndex == 0 {
 		return 0, true // free bitrate
 	}
-	version := (h.flag1 >> 7) & 0b1
-	if version == 1 {
-		return V1L3_BITRATE_TABLE[bitrateIndex], false
-	} else {
-		return V2L3_BITRATE_TABLE[bitrateIndex], false
-	}
+	return V1L3_BITRATE_TABLE[bitrateIndex], false
 }
 
 func GetSampleRate(h *MP3Frame) uint16 {
 	sampleRateIndex := h.flag1 & 0b11
-	version := (h.flag1 >> 7) & 0b1
-	if version == 1 {
-		return V1_SAMPLE_RATE_TABLE[sampleRateIndex]
-	} else {
-		return V2_SAMPLE_RATE_TABLE[sampleRateIndex]
-	}
+	return V1_SAMPLE_RATE_TABLE[sampleRateIndex]
 }
 
 // getter functions
