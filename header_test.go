@@ -14,7 +14,7 @@ func TestReadFirstFrameFromOutputMP3(t *testing.T) {
 
 	r := bufio.NewReader(f)
 
-	var h MP3Frame
+	var h MP3FrameHeader
 	if err := ReadHeader(&h, r); err != nil {
 		t.Fatalf("failed to read first MP3 frame header: %v", err)
 	}

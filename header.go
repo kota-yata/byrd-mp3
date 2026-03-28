@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-type MP3Frame struct {
+type MP3FrameHeader struct {
 	// version (1), protection (1), bitrate index(4), sample rate index(2),
 	// version=0 indicates MPEG2, version=1 indicates MPEG1
 	flag1 byte
@@ -21,10 +21,10 @@ type MP3Frame struct {
 	crcTarget []byte
 }
 
-func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
+func ReadHeader(h *MP3FrameHeader, reader *bufio.Reader) error {
 	var b byte
 	var err error
-	*h = MP3Frame{} // reset frame state
+	*h = MP3FrameHeader{} // reset frame state
 	for {
 		b, err = reader.ReadByte()
 		if err != nil {
@@ -116,7 +116,7 @@ func ReadHeader(h *MP3Frame, reader *bufio.Reader) error {
 
 // Layer III frame length = (144 * Bitrate / SampleRate) + Padding
 // the magic number 144 is derived from 1152 samples per frame and 8 bits
-func GetFrameLength(h *MP3Frame) (int, error) {
+func GetFrameLength(h *MP3FrameHeader) (int, error) {
 	bitrateKbps, isFree := GetBitrateKbps(h)
 	if isFree {
 		return 0, fmt.Errorf("free bitrate frames are not supported")
@@ -131,7 +131,7 @@ func GetFrameLength(h *MP3Frame) (int, error) {
 	return frameLength, nil
 }
 
-func ValidateCRC(h *MP3Frame, reader *bufio.Reader) bool {
+func ValidateCRC(h *MP3FrameHeader, reader *bufio.Reader) bool {
 	if !HasCRC(h) {
 		return true // no CRC to validate
 	}
@@ -139,7 +139,7 @@ func ValidateCRC(h *MP3Frame, reader *bufio.Reader) bool {
 }
 
 // GetBitrate returns the bitrate in bps. If the frame uses free bitrate, returns (0, true)
-func GetBitrateKbps(h *MP3Frame) (uint16, bool) {
+func GetBitrateKbps(h *MP3FrameHeader) (uint16, bool) {
 	bitrateIndex := (h.flag1 >> 2) & 0b1111
 	if bitrateIndex == 0 {
 		return 0, true // free bitrate
@@ -147,40 +147,40 @@ func GetBitrateKbps(h *MP3Frame) (uint16, bool) {
 	return V1L3_BITRATE_TABLE[bitrateIndex], false
 }
 
-func GetSampleRate(h *MP3Frame) uint16 {
+func GetSampleRate(h *MP3FrameHeader) uint16 {
 	sampleRateIndex := h.flag1 & 0b11
 	return V1_SAMPLE_RATE_TABLE[sampleRateIndex]
 }
 
 // getter functions
 
-func HasCRC(h *MP3Frame) bool {
+func HasCRC(h *MP3FrameHeader) bool {
 	return (h.flag1 & (1 << 6)) == 0
 }
 
-func Padding(h *MP3Frame) bool {
+func Padding(h *MP3FrameHeader) bool {
 	return h.padding
 }
 
-func GetChannelMode(h *MP3Frame) ChannelMode {
+func GetChannelMode(h *MP3FrameHeader) ChannelMode {
 	return ChannelMode((h.flag2 >> 6) & 0b11)
 }
 
-func GetModeExtension(h *MP3Frame) byte {
+func GetModeExtension(h *MP3FrameHeader) byte {
 	if GetChannelMode(h) != ChannelModeJointStereo {
 		return 0
 	}
 	return (h.flag2 >> 4) & 0b11
 }
 
-func IsCopyrighted(h *MP3Frame) bool {
+func IsCopyrighted(h *MP3FrameHeader) bool {
 	return ((h.flag2 >> 3) & 0b1) == 1
 }
 
-func IsOriginal(h *MP3Frame) bool {
+func IsOriginal(h *MP3FrameHeader) bool {
 	return ((h.flag2 >> 2) & 0b1) == 1
 }
 
-func GetEmphasis(h *MP3Frame) byte {
+func GetEmphasis(h *MP3FrameHeader) byte {
 	return h.flag2 & 0b11
 }

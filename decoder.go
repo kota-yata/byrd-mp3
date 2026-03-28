@@ -17,7 +17,7 @@ func OpenMP3File(path string) (io.ReadCloser, error) {
 
 // read single MP3 frame
 func DecodeMP3Frame(r *bufio.Reader) {
-	var h MP3Frame
+	var h MP3FrameHeader
 	if err := ReadHeader(&h, r); err != nil {
 		// handle error
 		return
