@@ -29,6 +29,11 @@ type GranuleChannelInfo struct {
 	// MixedBlockFlag indicates whether the block is mixed (only valid if BlockTypeShort).
 }
 
+const PURE_SHORT_REGION0_COUNT = 8
+const PURE_SHORT_REGION1_COUNT = 12
+const MIXED_BLOCK_REGION0_COUNT = 7
+const MIXED_BLOCK_REGION1_COUNT = 13
+
 func GetSideInfoLength(h *MP3FrameHeader) int {
 	if h.GetChannelMode() == ChannelModeMono {
 		return 17
@@ -147,11 +152,12 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 				}
 
 				if gc.GetBlockType() == BlockTypeShort && !gc.GetMixedBlockFlag() {
-					gc.Region0Count = 8
+					gc.Region0Count = PURE_SHORT_REGION0_COUNT
+					gc.Region1Count = PURE_SHORT_REGION1_COUNT
 				} else {
-					gc.Region0Count = 7
+					gc.Region0Count = MIXED_BLOCK_REGION0_COUNT
+					gc.Region1Count = MIXED_BLOCK_REGION1_COUNT
 				}
-				gc.Region1Count = 20 - gc.Region0Count
 			} else {
 				// if window_switching==0 block_type and mixed_block_flag are not present as they are fixed to 0
 				gc.SetBlockType(BlockTypeLong)
