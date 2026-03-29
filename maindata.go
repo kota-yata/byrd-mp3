@@ -10,7 +10,7 @@ const RESERVOIR_MAX = 511 // 2^9 - 1 which is the size of main_data_begin field 
 
 // only reads main data, does not parse it
 func ReadMainData(r *bufio.Reader, mainDataBegin uint16, mainDataLen int, mainDataReservoir *[]byte) ([]byte, error) {
-	cur := make([]byte, 0, mainDataLen) // no zero padding because we want to append
+	cur := make([]byte, mainDataLen)
 	_, err := io.ReadFull(r, cur)
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func ReadMainData(r *bufio.Reader, mainDataBegin uint16, mainDataLen int, mainDa
 	}
 	start := len(*mainDataReservoir) - int(mainDataBegin)
 
-	mainData := make([]byte, int(mainDataBegin)+mainDataLen)
+	mainData := make([]byte, 0, int(mainDataBegin)+mainDataLen)
 	mainData = append(mainData, (*mainDataReservoir)[start:]...) // append the last mainDataBegin bytes from reservoir
 	mainData = append(mainData, cur...)                          // append the current frame's main data to the end of main data
 	// update reservoir for next frame
