@@ -9,7 +9,8 @@ func TestReadMainData_NoReservoir(t *testing.T) {
 	// No reservoir, mainDataBegin=0, read N bytes
 	cur := []byte("abcdefghij")
 	var reservoir []byte
-	main, err := ReadMainData(0, &reservoir, cur)
+	var mainBuf []byte
+	main, err := ReadMainData(0, &reservoir, cur, mainBuf)
 	if err != nil {
 		t.Fatalf("ReadMainData failed: %v", err)
 	}
@@ -26,8 +27,9 @@ func TestReadMainData_WithReservoirAndBegin(t *testing.T) {
 	// Reservoir has 3 bytes; mainDataBegin=2 should pull last 2 bytes
 	reservoir := []byte("XYZ")
 	cur := []byte("abcde")
+	var mainBuf []byte
 
-	main, err := ReadMainData(2, &reservoir, cur)
+	main, err := ReadMainData(2, &reservoir, cur, mainBuf)
 	if err != nil {
 		t.Fatalf("ReadMainData failed: %v", err)
 	}
@@ -45,8 +47,9 @@ func TestReadMainData_WithReservoirAndBegin(t *testing.T) {
 func TestReadMainData_ReservoirUnderflow(t *testing.T) {
 	reservoir := []byte("XYZ")
 	cur := []byte("abc")
+	var mainBuf []byte
 
-	_, err := ReadMainData(5, &reservoir, cur) // need 5 bytes, have 3
+	_, err := ReadMainData(5, &reservoir, cur, mainBuf) // need 5 bytes, have 3
 	if err == nil {
 		t.Fatalf("expected reservoir underflow error, got nil")
 	}
@@ -59,8 +62,9 @@ func TestReadMainData_ReservoirTruncation(t *testing.T) {
 	}
 	reservoir := bytes.Repeat([]byte{'R'}, RESERVOIR_MAX-5)
 	cur := bytes.Repeat([]byte{'C'}, 20)
+	var mainBuf []byte
 
-	main, err := ReadMainData(0, &reservoir, cur)
+	main, err := ReadMainData(0, &reservoir, cur, mainBuf)
 	if err != nil {
 		t.Fatalf("ReadMainData failed: %v", err)
 	}
@@ -77,5 +81,22 @@ func TestReadMainData_ReservoirTruncation(t *testing.T) {
 		if reservoir[len(reservoir)-len(cur)+i] != 'C' {
 			t.Fatalf("reservoir tail mismatch at %d", i)
 		}
+	}
+}
+
+func TestReadMainData_ReusesMainDataBuffer(t *testing.T) {
+	reservoir := []byte("XYZ")
+	cur := []byte("abcde")
+	mainBuf := make([]byte, 0, 16)
+
+	main, err := ReadMainData(2, &reservoir, cur, mainBuf)
+	if err != nil {
+		t.Fatalf("ReadMainData failed: %v", err)
+	}
+	if len(main) == 0 {
+		t.Fatalf("main data is empty")
+	}
+	if &main[0] != &mainBuf[:cap(mainBuf)][0] {
+		t.Fatalf("expected ReadMainData to reuse provided buffer")
 	}
 }

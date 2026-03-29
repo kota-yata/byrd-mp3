@@ -19,6 +19,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var h MP3FrameHeader
 	var mainDataReservoir []byte
 	var cur []byte
+	var mainData []byte
 	for {
 		h = MP3FrameHeader{} // reset frame state
 		if err := ReadHeader(&h, r); err != nil {
@@ -49,7 +50,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 		}
 
 		mainDataLen := frameLen - 4 - sideInfoLen - crcLen
-		// we reuse cur buffer for reducing GC overhead, but make sure to grow it if needed
+		// we reuse cur buffer for reducing GC overhead, but grow it if needed
 		if cap(cur) < mainDataLen {
 			cur = make([]byte, mainDataLen)
 		}
@@ -59,7 +60,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
 		}
-		_, err = ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur)
+		mainData, err = ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur, mainData)
 		if err != nil {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
