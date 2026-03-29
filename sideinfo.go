@@ -13,10 +13,10 @@ type SideInfo struct {
 }
 
 type GranuleChannelInfo struct {
-	Part23Length     uint16
+	Part23Length     uint16 // total bit length of scalefactors and huffman-coded spectral information
 	BigValues        uint16
-	GlobalGain       byte
-	ScalefacCompress byte
+	GlobalGain       byte // used for dequantization
+	ScalefacCompress byte // bit length of each scalefactor value
 
 	TableSelect  [3]byte
 	SubblockGain [3]byte
@@ -24,6 +24,9 @@ type GranuleChannelInfo struct {
 	Region1Count byte
 	// WindowSwitching (1), BlockType(2), MixedBlockFlag(1), Preflag(1), ScalefacScale(1), Count1TableSelect(1), unused(1)
 	flags byte
+	// WindowSwitching indicates whether the block is short or long
+	// BlockType indicates the block type.
+	// MixedBlockFlag indicates whether the block is mixed (only valid if BlockTypeShort).
 }
 
 func GetSideInfoLength(h *MP3FrameHeader) int {
@@ -113,7 +116,7 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 				if err != nil {
 					return nil, err
 				}
-				gc.SetBlockType(byte(v))
+				gc.SetBlockType(BlockType(v))
 
 				v, err = br.ReadBits(1)
 				if err != nil {
@@ -138,18 +141,19 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 					gc.SubblockGain[i] = byte(v)
 				}
 
-				if gc.GetBlockType() == 0 {
+				// window_switching==1 means block is either short or mixed, so long block here is invalid
+				if gc.GetBlockType() == BlockTypeLong {
 					return nil, fmt.Errorf("invalid side info: block_type=0 with window_switching=1")
 				}
 
-				if gc.GetBlockType() == 2 && !gc.GetMixedBlockFlag() {
+				if gc.GetBlockType() == BlockTypeShort && !gc.GetMixedBlockFlag() {
 					gc.Region0Count = 8
 				} else {
 					gc.Region0Count = 7
 				}
 				gc.Region1Count = 20 - gc.Region0Count
 			} else {
-				gc.SetBlockType(0)
+				gc.SetBlockType(BlockTypeLong)
 				gc.SetMixedBlockFlag(false)
 				gc.SubblockGain = [3]byte{}
 
@@ -209,12 +213,12 @@ func (g *GranuleChannelInfo) GetWindowSwitching() bool {
 	return (g.flags>>7)&1 == 1
 }
 
-func (g *GranuleChannelInfo) SetBlockType(v byte) {
+func (g *GranuleChannelInfo) SetBlockType(v BlockType) {
 	g.flags &^= 0b11 << 5
-	g.flags |= (v & 0b11) << 5
+	g.flags |= (byte(v) & 0b11) << 5
 }
-func (g *GranuleChannelInfo) GetBlockType() byte {
-	return (g.flags >> 5) & 0b11
+func (g *GranuleChannelInfo) GetBlockType() BlockType {
+	return BlockType((g.flags >> 5) & 0b11)
 }
 
 func (g *GranuleChannelInfo) SetMixedBlockFlag(v bool) {

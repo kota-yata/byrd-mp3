@@ -23,3 +23,27 @@ func (m ChannelMode) String() string {
 		return "Unknown"
 	}
 }
+
+type BlockType uint8
+
+const (
+	BlockTypeLong BlockType = iota
+	BlockTypeStart
+	BlockTypeShort
+	BlockTypeEnd
+)
+
+func (b BlockType) String() string {
+	switch b {
+	case BlockTypeLong:
+		return "Long"
+	case BlockTypeStart:
+		return "Start"
+	case BlockTypeShort:
+		return "Short"
+	case BlockTypeEnd:
+		return "End"
+	default:
+		return "Unknown"
+	}
+}
