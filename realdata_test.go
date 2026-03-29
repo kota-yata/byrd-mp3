@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// Just to make sure no error occurs when parsing real MP3 data
 func TestParseOutputMP3RealData(t *testing.T) {
 	f, err := OpenMP3File("output.mp3")
 	if err != nil {
