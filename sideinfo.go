@@ -151,7 +151,7 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 					return nil, fmt.Errorf("invalid side info: block_type=0 with window_switching=1")
 				}
 
-				if gc.GetBlockType() == BlockTypeShort && !gc.GetMixedBlockFlag() {
+				if gc.GetBlockType() == BlockTypeShort && !gc.GetMixedBlockFlag() { // pure short block
 					gc.Region0Count = PURE_SHORT_REGION0_COUNT
 					gc.Region1Count = PURE_SHORT_REGION1_COUNT
 				} else {
@@ -159,7 +159,7 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 					gc.Region1Count = MIXED_BLOCK_REGION1_COUNT
 				}
 			} else {
-				// if window_switching==0 block_type and mixed_block_flag are not present as they are fixed to 0
+				// if window_switching==0 block_type, mixed_block_flag and subblock_gain are not present as they are fixed to 0
 				gc.SetBlockType(BlockTypeLong)
 				gc.SetMixedBlockFlag(false)
 				gc.SubblockGain = [3]byte{}

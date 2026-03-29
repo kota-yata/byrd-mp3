@@ -47,3 +47,8 @@ func (b BlockType) String() string {
 		return "Unknown"
 	}
 }
+
+type ScalefactorBits struct {
+	Slen1 int
+	Slen2 int
+}

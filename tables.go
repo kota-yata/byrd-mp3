@@ -46,4 +46,10 @@ var (
 		0x0220, 0x8225, 0x822F, 0x022A, 0x823B, 0x023E, 0x0234, 0x8231,
 		0x8213, 0x0216, 0x021C, 0x8219, 0x0208, 0x820D, 0x8207, 0x0202,
 	}
+
+	// SCALEFACTOR_COMPRESS maps scalefactor_compress (0–15)
+	// to corresponding (slen1, slen2) bit lengths.
+	SCALEFACTOR_COMPRESS = [16]ScalefactorBits{
+		{0, 0}, {0, 1}, {0, 2}, {0, 3}, {3, 0}, {1, 1}, {1, 2}, {1, 3}, {2, 1}, {2, 2}, {2, 3}, {3, 1}, {3, 2}, {3, 3}, {4, 2}, {4, 3},
+	}
 )
