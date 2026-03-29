@@ -23,7 +23,7 @@ func ReadMainData(r *bufio.Reader, mainDataBegin uint16, mainDataLen int, mainDa
 
 	mainData := make([]byte, 0, int(mainDataBegin)+mainDataLen)
 	mainData = append(mainData, (*mainDataReservoir)[start:]...) // append the last mainDataBegin bytes from reservoir
-	mainData = append(mainData, cur...)                          // append the current frame's main data to the end of main data
+	mainData = append(mainData, cur...)                          // append the current frame's main data
 	// update reservoir for next frame
 	*mainDataReservoir = append(*mainDataReservoir, cur...)
 	if len(*mainDataReservoir) > RESERVOIR_MAX { // only have to keep RESERVOIR_MAX bytes, so truncate the buffer
