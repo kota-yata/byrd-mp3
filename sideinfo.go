@@ -153,11 +153,12 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 				}
 				gc.Region1Count = 20 - gc.Region0Count
 			} else {
+				// if window_switching==0 block_type and mixed_block_flag are not present as they are fixed to 0
 				gc.SetBlockType(BlockTypeLong)
 				gc.SetMixedBlockFlag(false)
 				gc.SubblockGain = [3]byte{}
 
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					v, err = br.ReadBits(5)
 					if err != nil {
 						return nil, err
