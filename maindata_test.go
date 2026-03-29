@@ -100,3 +100,165 @@ func TestReadMainData_ReusesMainDataBuffer(t *testing.T) {
 		t.Fatalf("expected ReadMainData to reuse provided buffer")
 	}
 }
+
+func TestParseScaleFactor_LongBlockGranule0(t *testing.T) {
+	var bw bitWriter
+	wantLong := [21]uint8{}
+	for i := 0; i <= 10; i++ {
+		v := uint8(i % 2)
+		wantLong[i] = v
+		bw.write(1, uint32(v))
+	}
+	for i := 11; i <= 20; i++ {
+		v := uint8((i - 11) % 8)
+		wantLong[i] = v
+		bw.write(3, uint32(v))
+	}
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{Part23Length: 41, ScalefacCompress: 7}
+	var got Scalefactors
+
+	bits, err := ParseScaleFactor(br, gc, [4]byte{}, 0, nil, &got)
+	if err != nil {
+		t.Fatalf("ParseScaleFactor failed: %v", err)
+	}
+	if bits != 41 {
+		t.Fatalf("bits consumed = %d, want 41", bits)
+	}
+	if got.Long != wantLong {
+		t.Fatalf("long scalefactors got %v, want %v", got.Long, wantLong)
+	}
+}
+
+func TestParseScaleFactor_LongBlockGranule1SCFSIReuse(t *testing.T) {
+	prev := &Scalefactors{}
+	for i := range prev.Long {
+		prev.Long[i] = uint8(20 + i)
+	}
+
+	var bw bitWriter
+	wantLong := prev.Long
+	for i := 6; i <= 10; i++ {
+		v := uint8((i - 6) % 4)
+		wantLong[i] = v
+		bw.write(2, uint32(v))
+	}
+	for i := 16; i <= 20; i++ {
+		v := uint8((i - 16) % 2)
+		wantLong[i] = v
+		bw.write(1, uint32(v))
+	}
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{Part23Length: 15, ScalefacCompress: 8}
+	var got Scalefactors
+
+	bits, err := ParseScaleFactor(br, gc, [4]byte{1, 0, 1, 0}, 1, prev, &got)
+	if err != nil {
+		t.Fatalf("ParseScaleFactor failed: %v", err)
+	}
+	if bits != 15 {
+		t.Fatalf("bits consumed = %d, want 15", bits)
+	}
+	if got.Long != wantLong {
+		t.Fatalf("long scalefactors got %v, want %v", got.Long, wantLong)
+	}
+}
+
+func TestParseScaleFactor_ShortBlock(t *testing.T) {
+	var bw bitWriter
+	var wantShort [12][3]uint8
+	for sfb := 0; sfb <= 5; sfb++ {
+		for win := 0; win < 3; win++ {
+			v := uint8((sfb + win) % 2)
+			wantShort[sfb][win] = v
+			bw.write(1, uint32(v))
+		}
+	}
+	for sfb := 6; sfb <= 11; sfb++ {
+		for win := 0; win < 3; win++ {
+			v := uint8((sfb + win) % 4)
+			wantShort[sfb][win] = v
+			bw.write(2, uint32(v))
+		}
+	}
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{Part23Length: 54, ScalefacCompress: 6}
+	gc.SetWindowSwitching(true)
+	gc.SetBlockType(BlockTypeShort)
+	var got Scalefactors
+
+	bits, err := ParseScaleFactor(br, gc, [4]byte{}, 0, nil, &got)
+	if err != nil {
+		t.Fatalf("ParseScaleFactor failed: %v", err)
+	}
+	if bits != 54 {
+		t.Fatalf("bits consumed = %d, want 54", bits)
+	}
+	if got.Short != wantShort {
+		t.Fatalf("short scalefactors got %v, want %v", got.Short, wantShort)
+	}
+}
+
+func TestParseScaleFactor_MixedBlock(t *testing.T) {
+	var bw bitWriter
+	var want Scalefactors
+	for sfb := 0; sfb <= 7; sfb++ {
+		v := uint8(sfb)
+		want.Long[sfb] = v
+		bw.write(4, uint32(v))
+	}
+	for sfb := 3; sfb <= 5; sfb++ {
+		for win := 0; win < 3; win++ {
+			v := uint8((sfb + win) & 0xF)
+			want.Short[sfb][win] = v
+			bw.write(4, uint32(v))
+		}
+	}
+	for sfb := 6; sfb <= 11; sfb++ {
+		for win := 0; win < 3; win++ {
+			v := uint8((sfb + win) % 4)
+			want.Short[sfb][win] = v
+			bw.write(2, uint32(v))
+		}
+	}
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{Part23Length: 104, ScalefacCompress: 14}
+	gc.SetWindowSwitching(true)
+	gc.SetBlockType(BlockTypeShort)
+	gc.SetMixedBlockFlag(true)
+	var got Scalefactors
+
+	bits, err := ParseScaleFactor(br, gc, [4]byte{}, 0, nil, &got)
+	if err != nil {
+		t.Fatalf("ParseScaleFactor failed: %v", err)
+	}
+	if bits != 104 {
+		t.Fatalf("bits consumed = %d, want 104", bits)
+	}
+	if got != want {
+		t.Fatalf("mixed scalefactors got %+v, want %+v", got, want)
+	}
+}
+
+func TestParseScaleFactor_Part23TooShort(t *testing.T) {
+	var bw bitWriter
+	for i := 0; i <= 10; i++ {
+		bw.write(1, 1)
+	}
+	for i := 11; i <= 20; i++ {
+		bw.write(3, 1)
+	}
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{Part23Length: 40, ScalefacCompress: 7}
+	var got Scalefactors
+
+	_, err := ParseScaleFactor(br, gc, [4]byte{}, 0, nil, &got)
+	if err == nil {
+		t.Fatalf("expected part23 length error, got nil")
+	}
+}

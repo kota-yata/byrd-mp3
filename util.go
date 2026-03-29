@@ -17,11 +17,24 @@ func NewBitReader(data []byte) *BitReader {
 // read arbitral amount of bits (up to 32) and return as uint32.
 // caller should reuse the same variable for the retuned value to avoid unnecessary allocations
 func (r *BitReader) ReadBits(n int) (uint32, error) {
+	var v uint32
+	if err := r.ReadBitsTo(&v, n); err != nil {
+		return 0, err
+	}
+	return v, nil
+}
+
+// ReadBitsTo reads up to 32 bits into dst and advances the reader.
+// Reusing dst lets callers avoid repeatedly materializing temporary values.
+func (r *BitReader) ReadBitsTo(dst *uint32, n int) error {
+	if dst == nil {
+		return fmt.Errorf("nil destination")
+	}
 	if n <= 0 || n > 32 {
-		return 0, fmt.Errorf("invalid bit count: %d", n)
+		return fmt.Errorf("invalid bit count: %d", n)
 	}
 	if r.pos+n > len(r.data)*8 {
-		return 0, io.ErrUnexpectedEOF
+		return io.ErrUnexpectedEOF
 	}
 
 	var v uint32
@@ -32,5 +45,6 @@ func (r *BitReader) ReadBits(n int) (uint32, error) {
 		v = (v << 1) | uint32(bit)
 	}
 	r.pos += n
-	return v, nil
+	*dst = v
+	return nil
 }
