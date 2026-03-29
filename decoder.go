@@ -60,7 +60,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
 		}
-		mainData, err = ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur, mainData)
+		err = ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur, &mainData)
 		if err != nil {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
