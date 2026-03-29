@@ -18,6 +18,7 @@ func OpenMP3File(path string) (io.ReadCloser, error) {
 func DecodeMP3Frames(r *bufio.Reader) {
 	var h MP3FrameHeader
 	var mainDataReservoir []byte
+	var cur []byte
 	for {
 		h = MP3FrameHeader{} // reset frame state
 		if err := ReadHeader(&h, r); err != nil {
@@ -48,7 +49,17 @@ func DecodeMP3Frames(r *bufio.Reader) {
 		}
 
 		mainDataLen := frameLen - 4 - sideInfoLen - crcLen
-		_, err = ReadMainData(r, sideInfo.MainDataBegin, mainDataLen, &mainDataReservoir)
+		// we reuse cur buffer for reducing GC overhead, but make sure to grow it if needed
+		if cap(cur) < mainDataLen {
+			cur = make([]byte, mainDataLen)
+		}
+		cur = cur[:mainDataLen]
+		_, err = io.ReadFull(r, cur)
+		if err != nil {
+			fmt.Printf("failed to read main data: %v\n", err)
+			return
+		}
+		_, err = ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur)
 		if err != nil {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
