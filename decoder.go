@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+const GRANULE_COUNT = 2
+
 func OpenMP3File(path string) (io.ReadCloser, error) {
 	ext := ".mp3"
 	if len(path) < len(ext) || path[len(path)-len(ext):] != ext {
@@ -20,6 +22,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var mainDataReservoir []byte
 	var cur []byte
 	var mainData []byte
+	var scalefactors [2][2]Scalefactors
 	for {
 		h = MP3FrameHeader{} // reset frame state
 		if err := ReadHeader(&h, r); err != nil {
@@ -64,6 +67,34 @@ func DecodeMP3Frames(r *bufio.Reader) {
 		if err != nil {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
+		}
+		br := NewBitReader(mainData)
+		channels := 2
+		if h.GetChannelMode() == ChannelModeMono {
+			channels = 1
+		}
+		for gr := range GRANULE_COUNT {
+			for ch := 0; ch < channels; ch++ {
+				gc := &sideInfo.Granule[gr][ch]
+				part23Start := br.pos
+
+				var prev *Scalefactors
+				if gr == 1 {
+					prev = &scalefactors[0][ch]
+				}
+				_, err = ParseScaleFactor(br, gc, sideInfo.SCFSI[ch], gr, prev, &scalefactors[gr][ch])
+				if err != nil {
+					fmt.Printf("failed to parse scalefactors: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
+
+				// TODO: Implement huffman part parser. Skip the remaining part3 bits here until Huffman decoding is implemented.
+				br.pos = part23Start + int(gc.Part23Length)
+				if br.pos > len(mainData)*8 {
+					fmt.Printf("main data overrun: frame granule=%d channel=%d part23=%d\n", gr, ch, gc.Part23Length)
+					return
+				}
+			}
 		}
 
 		// check stream end
