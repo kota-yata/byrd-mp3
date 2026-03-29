@@ -8,7 +8,7 @@ import (
 
 const RESERVOIR_MAX = 511 // 2^9 - 1 which is the size of main_data_begin field of side info
 
-// only reads main data, does not parse it
+// only returns the main data, does not parse it
 func ReadMainData(r *bufio.Reader, mainDataBegin uint16, mainDataLen int, mainDataReservoir *[]byte) ([]byte, error) {
 	cur := make([]byte, mainDataLen)
 	_, err := io.ReadFull(r, cur)

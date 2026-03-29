@@ -14,7 +14,8 @@ func NewBitReader(data []byte) *BitReader {
 	return &BitReader{data: data}
 }
 
-// read arbitral amount of bits (up to 32) and return as uint32
+// read arbitral amount of bits (up to 32) and return as uint32.
+// caller should reuse the same variable for the retuned value to avoid unnecessary allocations
 func (r *BitReader) ReadBits(n int) (uint32, error) {
 	if n <= 0 || n > 32 {
 		return 0, fmt.Errorf("invalid bit count: %d", n)
