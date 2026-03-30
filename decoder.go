@@ -88,6 +88,12 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					return
 				}
 
+				huffmanLen := int(gc.Part23Length)*8 - (br.pos - part23Start) // remaining bits for huffman coded data
+				if huffmanLen < 0 {
+					fmt.Printf("main data underrun: frame granule=%d channel=%d part23=%d bits consumed for scalefactors=%d\n", gr, ch, gc.Part23Length, br.pos-part23Start)
+					return
+				}
+
 				// TODO: Implement huffman part parser. Skip the remaining part3 bits here until Huffman decoding is implemented.
 				br.pos = part23Start + int(gc.Part23Length)
 				if br.pos > len(mainData)*8 {
