@@ -1,0 +1,5 @@
+This product includes software developed by Hajime Hoshi.
+
+* huffmanTable at ./tables.go
+  Copyright 2017 Hajime Hoshi
+  Licensed under the Apache License, Version 2.0
