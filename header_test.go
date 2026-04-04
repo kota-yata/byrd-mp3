@@ -101,3 +101,29 @@ func TestReadHeader_WithCRC(t *testing.T) {
 		t.Fatalf("frame length got (%d, %v), want (209, nil)", got, err)
 	}
 }
+
+func TestReadHeader_ResyncAfterInvalidCandidate(t *testing.T) {
+	data := []byte{
+		0xFF, 0xE3, // sync-looking, but unsupported MPEG version candidate
+		0xFF, 0xFB, 0x54, 0x00,
+	}
+
+	r := bufio.NewReader(bytes.NewReader(data))
+	var h MP3FrameHeader
+	if err := ReadHeader(&h, r); err != nil {
+		t.Fatalf("ReadHeader failed: %v", err)
+	}
+
+	if h.HasCRC() {
+		t.Fatalf("HasCRC got true, want false")
+	}
+	if got, free := h.GetBitrateKbps(); free || got != 64 {
+		t.Fatalf("bitrate got %d kbps (free=%v), want 64 kbps and free=false", got, free)
+	}
+	if got := h.GetSampleRate(); got != 48000 {
+		t.Fatalf("sample rate got %d, want 48000", got)
+	}
+	if got := h.GetChannelMode(); got != ChannelModeStereo {
+		t.Fatalf("channel mode got %s, want %s", got, ChannelModeStereo)
+	}
+}

@@ -24,8 +24,8 @@ type MP3FrameHeader struct {
 func ReadHeader(h *MP3FrameHeader, reader *bufio.Reader) error {
 	var b byte
 	var err error
-	*h = MP3FrameHeader{} // reset frame state
 	for {
+		*h = MP3FrameHeader{} // reset any partially parsed candidate
 		b, err = reader.ReadByte()
 		if err != nil {
 			return err
@@ -52,12 +52,18 @@ func ReadHeader(h *MP3FrameHeader, reader *bufio.Reader) error {
 		case 0b11: // MPEG Version 1.0
 			h.flag1 |= 1 << 7 // set msb of flag1 to indicate MPEG1
 		default:
-			// ignore MPEG Version 2/2.5 at this point
-			return fmt.Errorf("unsupported MPEG version %02x", (b>>3)&0b11)
+			// false sync candidate; keep scanning
+			if err := reader.UnreadByte(); err != nil {
+				return err
+			}
+			continue
 		}
 		// at this time we only support Layer III
 		if (b >> 1 & 0b11) != 0b01 {
-			return fmt.Errorf("unsupported layer, only Layer III (MP3) is supported")
+			if err := reader.UnreadByte(); err != nil {
+				return err
+			}
+			continue
 		}
 		// read protection bit, 0 means CRC is present, 1 means no CRC
 		pBit := b & 0b01
@@ -74,13 +80,13 @@ func ReadHeader(h *MP3FrameHeader, reader *bufio.Reader) error {
 		}
 		bitrateIndex := (b >> 4) & 0b1111
 		if bitrateIndex == 0b1111 {
-			return fmt.Errorf("invalid bitrate index: bad")
+			continue
 		}
 		h.flag1 |= bitrateIndex << 2 // set bitrate index
 
 		sampleRateIndex := (b >> 2) & 0b11
 		if sampleRateIndex == 0b11 {
-			return fmt.Errorf("invalid sample rate index: reserved")
+			continue
 		}
 		h.flag1 |= sampleRateIndex // set sample rate index
 
