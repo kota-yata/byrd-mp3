@@ -6,6 +6,7 @@ import (
 )
 
 // cosine value for butterfly calculation
+// aliasReductionCS[i] = 1 / sqrt(1 + a[i]^2) where a[i] is specific coefficients defined in the standard
 var aliasReductionCS = [8]float64{
 	0.857492925712,
 	0.881741997318,
@@ -18,6 +19,7 @@ var aliasReductionCS = [8]float64{
 }
 
 // sine value for butterfly calculation
+// aliasReductionCA[i] = a[i] / sqrt(1 + a[i]^2) where a[i] is specific coefficients defined in the standard
 var aliasReductionCA = [8]float64{
 	-0.514495755427,
 	-0.471731968565,
