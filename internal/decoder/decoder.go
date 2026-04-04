@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"byrd/internal/common"
 	"byrd/internal/header"
+	"byrd/internal/hybrid"
 	"byrd/internal/maindata"
 	"byrd/internal/stereo"
 	"fmt"
@@ -30,6 +31,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var spectralValues [2][2][576]int
 	var requantizedValues [2][2][576]float64
 	var reorderedValues [2][2][576]float64
+	var hybridValues [2][2][576]float64
 	for {
 		h = header.MP3FrameHeader{} // reset frame state
 		if err := header.ReadHeader(&h, r); err != nil {
@@ -133,6 +135,14 @@ func DecodeMP3Frames(r *bufio.Reader) {
 				right := reorderedValues[gr][1][:]
 				if err := stereo.ApplyJointStereo(h.GetChannelMode(), h.GetModeExtension(), left, right); err != nil {
 					fmt.Printf("failed to apply joint stereo: frame granule=%d err=%v\n", gr, err)
+					return
+				}
+			}
+			for ch := 0; ch < channels; ch++ {
+				hybridBuffer := hybridValues[gr][ch][:]
+				copy(hybridBuffer, reorderedValues[gr][ch][:])
+				if err := hybrid.ApplyAliasReduction(&sideInfo.Granule[gr][ch], hybridBuffer); err != nil {
+					fmt.Printf("failed to apply alias reduction: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
 			}

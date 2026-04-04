@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"byrd/internal/common"
 	"byrd/internal/header"
+	"byrd/internal/hybrid"
 	"byrd/internal/maindata"
 	"byrd/internal/stereo"
 	"fmt"
@@ -156,6 +157,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 		var requantizedValues [2][576]float64
 		var reorderedValues [2][576]float64
 		var stereoValues [2][576]float64
+		var hybridValues [2][576]float64
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
@@ -261,6 +263,20 @@ func runParseRealDataTest(t *testing.T, path string) {
 					}
 					frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d stereoNonZero=%d", gr, ch, nonZeroStereo))
 				}
+			}
+			for ch := 0; ch < channels; ch++ {
+				copy(hybridValues[ch][:], stereoValues[ch][:])
+				if err := hybrid.ApplyAliasReduction(&sideInfo.Granule[gr][ch], hybridValues[ch][:]); err != nil {
+					logFrameSummary()
+					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to apply alias reduction: %v", fileLabel, frameIndex, gr, ch, err)
+				}
+				nonZeroHybrid := 0
+				for _, v := range hybridValues[ch] {
+					if v != 0 {
+						nonZeroHybrid++
+					}
+				}
+				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d", gr, ch, nonZeroHybrid))
 			}
 		}
 		frameIndex++
