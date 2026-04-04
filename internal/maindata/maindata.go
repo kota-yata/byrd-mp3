@@ -298,14 +298,3 @@ func ParseCount1Values(br *common.BitReader, gc *common.GranuleChannelInfo, part
 
 	return writePos - startLine, nil
 }
-
-func FillRZeroValues(spectralValues *[]int) error {
-	if spectralValues == nil {
-		return fmt.Errorf("nil spectral values buffer")
-	}
-	if cap(*spectralValues) < 576 {
-		return fmt.Errorf("spectral values buffer too small: cap=%d", cap(*spectralValues))
-	}
-	*spectralValues = (*spectralValues)[:576]
-	return nil
-}

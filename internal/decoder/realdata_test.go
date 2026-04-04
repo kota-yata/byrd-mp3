@@ -137,9 +137,6 @@ func TestParseOutputMP3RealData(t *testing.T) {
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse count1 values: %v", frameIndex, gr, ch, err)
 				}
-				if err := maindata.FillRZeroValues(&spectralBuffer); err != nil {
-					t.Fatalf("frame %d gr=%d ch=%d: failed to fill rzero values: %v", frameIndex, gr, ch, err)
-				}
 				requantizedBuffer := requantizedValues[ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors, spectralBuffer, &requantizedBuffer); err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to requantize values: %v", frameIndex, gr, ch, err)

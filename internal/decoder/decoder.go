@@ -110,10 +110,6 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					fmt.Printf("failed to parse count1 values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
-				if err := maindata.FillRZeroValues(&spectralBuffer); err != nil {
-					fmt.Printf("failed to fill rzero values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
-				}
 				requantizedBuffer := requantizedValues[gr][ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors[gr][ch], spectralBuffer, &requantizedBuffer); err != nil {
 					fmt.Printf("failed to requantize values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
