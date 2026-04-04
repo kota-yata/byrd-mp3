@@ -8,6 +8,7 @@ import (
 	"byrd/internal/maindata"
 	"byrd/internal/stereo"
 	"byrd/internal/synthesis"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
@@ -19,6 +20,56 @@ import (
 
 // Just to make sure no error occurs when parsing bundled MP3 data.
 func TestParseStaticMP3RealData(t *testing.T) {
+	paths := listStaticMP3Paths(t)
+
+	for _, path := range paths {
+		path := path
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			runParseRealDataTest(t, path)
+		})
+	}
+}
+
+func TestWriteStaticDecodedWAVFiles(t *testing.T) {
+	paths := listStaticMP3Paths(t)
+
+	for _, path := range paths {
+		path := path
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			f, err := OpenMP3File(path)
+			if err != nil {
+				t.Fatalf("failed to open %s: %v", filepath.Base(path), err)
+			}
+			defer f.Close()
+
+			samples, sampleRate, channels, err := DecodeMP3Frames(bufio.NewReader(f))
+			if err != nil {
+				t.Fatalf("failed to decode %s: %v", filepath.Base(path), err)
+			}
+			if len(samples) == 0 {
+				t.Fatalf("decoded samples are empty for %s", filepath.Base(path))
+			}
+
+			outPath := strings.TrimSuffix(path, filepath.Ext(path)) + ".decoded.wav"
+			if err := writePCMAsWAV(outPath, samples, sampleRate, channels); err != nil {
+				t.Fatalf("failed to write wav for %s: %v", filepath.Base(path), err)
+			}
+
+			info, err := os.Stat(outPath)
+			if err != nil {
+				t.Fatalf("failed to stat %s: %v", filepath.Base(outPath), err)
+			}
+			if info.Size() <= 44 {
+				t.Fatalf("wav output too small: %s size=%d", filepath.Base(outPath), info.Size())
+			}
+			t.Logf("wrote %s", outPath)
+		})
+	}
+}
+
+func listStaticMP3Paths(t *testing.T) []string {
+	t.Helper()
+
 	pattern := filepath.Join("..", "..", "static", "*.mp3")
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
@@ -28,13 +79,77 @@ func TestParseStaticMP3RealData(t *testing.T) {
 	if len(paths) == 0 {
 		t.Fatalf("no mp3 files found under static/")
 	}
+	return paths
+}
 
-	for _, path := range paths {
-		path := path
-		t.Run(filepath.Base(path), func(t *testing.T) {
-			runParseRealDataTest(t, path)
-		})
+func writePCMAsWAV(path string, samples []int16, sampleRate uint16, channels int) error {
+	if sampleRate == 0 {
+		return fmt.Errorf("invalid sample rate: 0")
 	}
+	if channels <= 0 {
+		return fmt.Errorf("invalid channels: %d", channels)
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	const bitsPerSample = 16
+	const bytesPerSample = bitsPerSample / 8
+
+	blockAlign := uint16(channels * bytesPerSample)
+	byteRate := uint32(sampleRate) * uint32(blockAlign)
+	dataSize := uint32(len(samples) * bytesPerSample)
+	riffSize := 36 + dataSize
+
+	if _, err := f.Write([]byte("RIFF")); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, riffSize); err != nil {
+		return err
+	}
+	if _, err := f.Write([]byte("WAVE")); err != nil {
+		return err
+	}
+	if _, err := f.Write([]byte("fmt ")); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(16)); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(1)); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(channels)); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(sampleRate)); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, byteRate); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, blockAlign); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(bitsPerSample)); err != nil {
+		return err
+	}
+	if _, err := f.Write([]byte("data")); err != nil {
+		return err
+	}
+	if err := binary.Write(f, binary.LittleEndian, dataSize); err != nil {
+		return err
+	}
+	for _, sample := range samples {
+		if err := binary.Write(f, binary.LittleEndian, sample); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func runParseRealDataTest(t *testing.T, path string) {
