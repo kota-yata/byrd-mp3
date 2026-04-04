@@ -35,6 +35,8 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var hybridValues [2][2][576]float64
 	var overlapState [2][32][18]float64
 	var hybridSamples [2][2][32][18]float64
+	var synthesisState [2]synthesis.PolyphaseState
+	var pcmSamples [2][2][576]float64
 	for {
 		h = header.MP3FrameHeader{} // reset frame state
 		if err := header.ReadHeader(&h, r); err != nil {
@@ -153,6 +155,10 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					return
 				}
 				synthesis.ApplyFrequencyInversion(&hybridSamples[gr][ch])
+				if err := synthesis.SynthesizeGranule(&hybridSamples[gr][ch], &synthesisState[ch], &pcmSamples[gr][ch]); err != nil {
+					fmt.Printf("failed to run polyphase synthesis: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
 			}
 		}
 

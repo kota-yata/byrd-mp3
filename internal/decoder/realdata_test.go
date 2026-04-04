@@ -161,6 +161,8 @@ func runParseRealDataTest(t *testing.T, path string) {
 		var hybridValues [2][576]float64
 		var overlapState [2][32][18]float64
 		var hybridSamples [2][32][18]float64
+		var synthesisState [2]synthesis.PolyphaseState
+		var pcmSamples [2][576]float64
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
@@ -300,7 +302,17 @@ func runParseRealDataTest(t *testing.T, path string) {
 						}
 					}
 				}
-				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d hybridNonZero=%d invertedNonZero=%d", gr, ch, nonZeroHybrid, nonZeroSamples, nonZeroInverted))
+				if err := synthesis.SynthesizeGranule(&hybridSamples[ch], &synthesisState[ch], &pcmSamples[ch]); err != nil {
+					logFrameSummary()
+					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to run polyphase synthesis: %v", fileLabel, frameIndex, gr, ch, err)
+				}
+				nonZeroPCM := 0
+				for _, v := range pcmSamples[ch] {
+					if v != 0 {
+						nonZeroPCM++
+					}
+				}
+				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d hybridNonZero=%d invertedNonZero=%d pcmNonZero=%d", gr, ch, nonZeroHybrid, nonZeroSamples, nonZeroInverted, nonZeroPCM))
 			}
 		}
 		frameIndex++
