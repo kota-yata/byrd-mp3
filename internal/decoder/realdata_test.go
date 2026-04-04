@@ -7,6 +7,7 @@ import (
 	"byrd/internal/hybrid"
 	"byrd/internal/maindata"
 	"byrd/internal/stereo"
+	"byrd/internal/synthesis"
 	"fmt"
 	"io"
 	"os"
@@ -290,7 +291,16 @@ func runParseRealDataTest(t *testing.T, path string) {
 						}
 					}
 				}
-				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d hybridNonZero=%d", gr, ch, nonZeroHybrid, nonZeroSamples))
+				synthesis.ApplyFrequencyInversion(&hybridSamples[ch])
+				nonZeroInverted := 0
+				for sb := range hybridSamples[ch] {
+					for i := range hybridSamples[ch][sb] {
+						if hybridSamples[ch][sb][i] != 0 {
+							nonZeroInverted++
+						}
+					}
+				}
+				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d hybridNonZero=%d invertedNonZero=%d", gr, ch, nonZeroHybrid, nonZeroSamples, nonZeroInverted))
 			}
 		}
 		frameIndex++

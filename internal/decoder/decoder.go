@@ -7,6 +7,7 @@ import (
 	"byrd/internal/hybrid"
 	"byrd/internal/maindata"
 	"byrd/internal/stereo"
+	"byrd/internal/synthesis"
 	"fmt"
 	"io"
 	"os"
@@ -151,6 +152,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					fmt.Printf("failed to run hybrid synthesis: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
+				synthesis.ApplyFrequencyInversion(&hybridSamples[gr][ch])
 			}
 		}
 
