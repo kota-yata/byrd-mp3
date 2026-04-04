@@ -56,6 +56,7 @@ func ApplyAliasReduction(gc *common.GranuleChannelInfo, values []float64) error 
 			// butterfly calculation
 			// (values[li]) = (cs[i], -ca[i])(values[li])
 			//  values[ui]     ca[i], cs[i]   values[ui]
+			// the closer a value is to the boundary, the more it gets mixed with the counterpart across the boundary
 			values[li] = lower*aliasReductionCS[i] - upper*aliasReductionCA[i]
 			values[ui] = upper*aliasReductionCS[i] + lower*aliasReductionCA[i]
 		}
