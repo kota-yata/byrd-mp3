@@ -3,19 +3,19 @@ package header
 // MPEG-1 Layer III frame parser
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"bufio"
 	"fmt"
 	"io"
 )
 
-type ChannelMode = core.ChannelMode
+type ChannelMode = common.ChannelMode
 
 const (
-	ChannelModeStereo      = core.ChannelModeStereo
-	ChannelModeJointStereo = core.ChannelModeJointStereo
-	ChannelModeDualChannel = core.ChannelModeDualChannel
-	ChannelModeMono        = core.ChannelModeMono
+	ChannelModeStereo      = common.ChannelModeStereo
+	ChannelModeJointStereo = common.ChannelModeJointStereo
+	ChannelModeDualChannel = common.ChannelModeDualChannel
+	ChannelModeMono        = common.ChannelModeMono
 )
 
 type MP3FrameHeader struct {
@@ -156,12 +156,12 @@ func (h *MP3FrameHeader) GetBitrateKbps() (uint16, bool) {
 	if bitrateIndex == 0 {
 		return 0, true // free bitrate
 	}
-	return core.V1L3_BITRATE_TABLE[bitrateIndex], false
+	return common.V1L3_BITRATE_TABLE[bitrateIndex], false
 }
 
 func (h *MP3FrameHeader) GetSampleRate() uint16 {
 	sampleRateIndex := h.flag1 & 0b11
-	return core.V1_SAMPLE_RATE_TABLE[sampleRateIndex]
+	return common.V1_SAMPLE_RATE_TABLE[sampleRateIndex]
 }
 
 // getter functions

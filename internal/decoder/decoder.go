@@ -1,7 +1,7 @@
 package decoder
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"byrd/internal/header"
 	"byrd/internal/maindata"
 	"bufio"
@@ -72,7 +72,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 			fmt.Printf("failed to read main data: %v\n", err)
 			return
 		}
-		br := core.NewBitReader(mainData)
+		br := common.NewBitReader(mainData)
 		channels := 2
 		if h.GetChannelMode() == header.ChannelModeMono {
 			channels = 1

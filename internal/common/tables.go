@@ -1,4 +1,4 @@
-package core
+package common
 
 // Byrd only support MPEG-1 Layer III frames
 

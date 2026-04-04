@@ -1,7 +1,7 @@
 package maindata
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"fmt"
 	"strings"
 )
@@ -67,7 +67,7 @@ type Scalefactors struct {
 	Short [12][3]uint8 // 12 bands for short blocks, each with 3 windows
 }
 
-func readScalefactorBits(br *core.BitReader, limit int, width int, scratch *uint32) (uint8, error) {
+func readScalefactorBits(br *common.BitReader, limit int, width int, scratch *uint32) (uint8, error) {
 	if width == 0 {
 		return 0, nil
 	}
@@ -80,7 +80,7 @@ func readScalefactorBits(br *core.BitReader, limit int, width int, scratch *uint
 	return uint8(*scratch), nil
 }
 
-func readLongScalefactorRange(br *core.BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
+func readLongScalefactorRange(br *common.BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
 	for sfb := from; sfb <= to; sfb++ {
 		v, err := readScalefactorBits(br, limit, width, scratch)
 		if err != nil {
@@ -91,7 +91,7 @@ func readLongScalefactorRange(br *core.BitReader, limit int, width int, from int
 	return nil
 }
 
-func readShortScalefactorRange(br *core.BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
+func readShortScalefactorRange(br *common.BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
 	for sfb := from; sfb <= to; sfb++ {
 		for win := range SCALEFACTOR_SHORT_WINDOW_COUNT {
 			v, err := readScalefactorBits(br, limit, width, scratch)
@@ -104,7 +104,7 @@ func readShortScalefactorRange(br *core.BitReader, limit int, width int, from in
 	return nil
 }
 
-func ParseScaleFactor(br *core.BitReader, gc *core.GranuleChannelInfo, scfsi [4]byte, granule int, prev *Scalefactors, scaleFactors *Scalefactors) (int, error) {
+func ParseScaleFactor(br *common.BitReader, gc *common.GranuleChannelInfo, scfsi [4]byte, granule int, prev *Scalefactors, scaleFactors *Scalefactors) (int, error) {
 	if br == nil {
 		return 0, fmt.Errorf("nil BitReader")
 	}
@@ -117,17 +117,17 @@ func ParseScaleFactor(br *core.BitReader, gc *core.GranuleChannelInfo, scfsi [4]
 	if granule < 0 || granule > 1 {
 		return 0, fmt.Errorf("invalid granule index: %d", granule)
 	}
-	if int(gc.ScalefacCompress) >= len(core.SCALEFACTOR_COMPRESS) {
+	if int(gc.ScalefacCompress) >= len(common.SCALEFACTOR_COMPRESS) {
 		return 0, fmt.Errorf("invalid scalefactor_compress: %d", gc.ScalefacCompress)
 	}
 
 	*scaleFactors = Scalefactors{}
 	start := br.Pos
 	limit := start + int(gc.Part23Length)
-	slen := core.SCALEFACTOR_COMPRESS[gc.ScalefacCompress]
+	slen := common.SCALEFACTOR_COMPRESS[gc.ScalefacCompress]
 	var scratch uint32
 
-	longSyntax := !gc.GetWindowSwitching() || core.BlockType(gc.GetBlockType()) != core.BlockTypeShort
+	longSyntax := !gc.GetWindowSwitching() || common.BlockType(gc.GetBlockType()) != common.BlockTypeShort
 	switch {
 	case longSyntax:
 		groups := [...]struct {
@@ -173,7 +173,7 @@ func ParseScaleFactor(br *core.BitReader, gc *core.GranuleChannelInfo, scfsi [4]
 	return br.Pos - start, nil
 }
 
-func ParseBigValues(br *core.BitReader, sampleRate uint16, gc *core.GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
+func ParseBigValues(br *common.BitReader, sampleRate uint16, gc *common.GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
 	if br == nil {
 		return 0, fmt.Errorf("nil BitReader")
 	}
@@ -230,7 +230,7 @@ func ParseBigValues(br *core.BitReader, sampleRate uint16, gc *core.GranuleChann
 	return lineCount, nil
 }
 
-func ParseCount1Values(br *core.BitReader, gc *core.GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
+func ParseCount1Values(br *common.BitReader, gc *common.GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
 	if br == nil {
 		return 0, fmt.Errorf("nil BitReader")
 	}
@@ -245,7 +245,7 @@ func ParseCount1Values(br *core.BitReader, gc *core.GranuleChannelInfo, part23En
 	if gc.GetCount1TableSelect() {
 		tableIndex = 33
 	}
-	table, ok := core.BaseTables[tableIndex]
+	table, ok := common.BaseTables[tableIndex]
 	if !ok || table.Data == nil {
 		return 0, fmt.Errorf("unsupported count1 huffman table: %d", tableIndex)
 	}

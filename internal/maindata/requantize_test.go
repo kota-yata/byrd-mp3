@@ -1,13 +1,13 @@
 package maindata
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"math"
 	"testing"
 )
 
 func TestRequantize_LongBlock_ZeroInput(t *testing.T) {
-	gc := &core.GranuleChannelInfo{GlobalGain: 210}
+	gc := &common.GranuleChannelInfo{GlobalGain: 210}
 	var out []float64
 	if err := Requantize(44100, gc, &Scalefactors{}, make([]int, 576), &out); err != nil {
 		t.Fatalf("Requantize failed: %v", err)
@@ -20,7 +20,7 @@ func TestRequantize_LongBlock_ZeroInput(t *testing.T) {
 }
 
 func TestRequantize_LongBlock_UsesPreflag(t *testing.T) {
-	gc := &core.GranuleChannelInfo{GlobalGain: 220}
+	gc := &common.GranuleChannelInfo{GlobalGain: 220}
 	gc.SetPreflag(true)
 	sfs := &Scalefactors{}
 	sfs.Long[11] = 2
@@ -38,9 +38,9 @@ func TestRequantize_LongBlock_UsesPreflag(t *testing.T) {
 }
 
 func TestRequantize_ShortBlock_UsesSubblockGain(t *testing.T) {
-	gc := &core.GranuleChannelInfo{GlobalGain: 210, SubblockGain: [3]byte{0, 2, 0}}
+	gc := &common.GranuleChannelInfo{GlobalGain: 210, SubblockGain: [3]byte{0, 2, 0}}
 	gc.SetWindowSwitching(true)
-	gc.SetBlockType(core.BlockTypeShort)
+	gc.SetBlockType(common.BlockTypeShort)
 	sfs := &Scalefactors{}
 	sfs.Short[0][1] = 3
 	spectral := make([]int, 576)
@@ -57,7 +57,7 @@ func TestRequantize_ShortBlock_UsesSubblockGain(t *testing.T) {
 }
 
 func TestRequantize_InvalidInputLength(t *testing.T) {
-	gc := &core.GranuleChannelInfo{}
+	gc := &common.GranuleChannelInfo{}
 	var out []float64
 	err := Requantize(44100, gc, &Scalefactors{}, []int{1}, &out)
 	if err == nil {

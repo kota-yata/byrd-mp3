@@ -1,7 +1,7 @@
 package decoder
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"byrd/internal/header"
 	"byrd/internal/maindata"
 	"bufio"
@@ -107,7 +107,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 			frameSummary = append(frameSummary, fmt.Sprintf("ch=%d scfsi=%v", ch, sideInfo.SCFSI[ch]))
 		}
 
-		br := core.NewBitReader(mainData)
+		br := common.NewBitReader(mainData)
 		var prev [2]maindata.Scalefactors
 		var spectralValues [2][576]int
 		for gr := 0; gr < 2; gr++ {

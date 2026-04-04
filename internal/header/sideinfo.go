@@ -1,24 +1,24 @@
 package header
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"bufio"
 	"fmt"
 	"io"
 )
 
-type SideInfo = core.SideInfo
-type GranuleChannelInfo = core.GranuleChannelInfo
-type BlockType = core.BlockType
+type SideInfo = common.SideInfo
+type GranuleChannelInfo = common.GranuleChannelInfo
+type BlockType = common.BlockType
 
 const (
-	BlockTypeLong = core.BlockTypeLong
-	BlockTypeShort = core.BlockTypeShort
+	BlockTypeLong  = common.BlockTypeLong
+	BlockTypeShort = common.BlockTypeShort
 
-	PURE_SHORT_REGION0_COUNT  = core.PURE_SHORT_REGION0_COUNT
-	PURE_SHORT_REGION1_COUNT  = core.PURE_SHORT_REGION1_COUNT
-	MIXED_BLOCK_REGION0_COUNT = core.MIXED_BLOCK_REGION0_COUNT
-	MIXED_BLOCK_REGION1_COUNT = core.MIXED_BLOCK_REGION1_COUNT
+	PURE_SHORT_REGION0_COUNT  = common.PURE_SHORT_REGION0_COUNT
+	PURE_SHORT_REGION1_COUNT  = common.PURE_SHORT_REGION1_COUNT
+	MIXED_BLOCK_REGION0_COUNT = common.MIXED_BLOCK_REGION0_COUNT
+	MIXED_BLOCK_REGION1_COUNT = common.MIXED_BLOCK_REGION1_COUNT
 )
 
 func GetSideInfoLength(h *MP3FrameHeader) int {
@@ -39,7 +39,7 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 		h.crcTarget = append(h.crcTarget, buf...)
 	}
 
-	br := core.NewBitReader(buf)
+	br := common.NewBitReader(buf)
 	si := &SideInfo{}
 
 	v, err := br.ReadBits(9)

@@ -1,7 +1,7 @@
 package maindata
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"fmt"
 	"math"
 )
@@ -12,7 +12,7 @@ const (
 )
 
 // TODO: float64 is used here for correctness-first implementation; optimize to float32 or fixed-point later if needed.
-func Requantize(sampleRate uint16, gc *core.GranuleChannelInfo, scalefactors *Scalefactors, spectralValues []int, out *[]float64) error {
+func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, spectralValues []int, out *[]float64) error {
 	if gc == nil {
 		return fmt.Errorf("nil granule channel info")
 	}
@@ -25,7 +25,7 @@ func Requantize(sampleRate uint16, gc *core.GranuleChannelInfo, scalefactors *Sc
 	if len(spectralValues) != 576 {
 		return fmt.Errorf("invalid spectral values length: %d", len(spectralValues))
 	}
-	sfBands, ok := core.SCALEFACTOR_BAND_INDICES[sampleRate]
+	sfBands, ok := common.SCALEFACTOR_BAND_INDICES[sampleRate]
 	if !ok {
 		return fmt.Errorf("unsupported sample rate for scalefactor bands: %d", sampleRate)
 	}
@@ -43,7 +43,7 @@ func Requantize(sampleRate uint16, gc *core.GranuleChannelInfo, scalefactors *Sc
 		}
 
 		switch {
-		case !gc.GetWindowSwitching() || gc.GetBlockType() != core.BlockTypeShort:
+		case !gc.GetWindowSwitching() || gc.GetBlockType() != common.BlockTypeShort:
 			sfb := longSFBForLine(sfBands.Long, i)
 			(*out)[i] = requantizeLongLine(is, gc, scalefactors, sfb)
 		case gc.GetMixedBlockFlag() && i < mixedLongEndLine:
@@ -61,10 +61,10 @@ func Requantize(sampleRate uint16, gc *core.GranuleChannelInfo, scalefactors *Sc
 	return nil
 }
 
-func requantizeLongLine(is int, gc *core.GranuleChannelInfo, scalefactors *Scalefactors, sfb int) float64 {
+func requantizeLongLine(is int, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, sfb int) float64 {
 	pretab := 0
-	if gc.GetPreflag() && sfb < len(core.PRETAB) {
-		pretab = int(core.PRETAB[sfb])
+	if gc.GetPreflag() && sfb < len(common.PRETAB) {
+		pretab = int(common.PRETAB[sfb])
 	}
 	scalefacMultiplier := 1
 	if gc.GetScalefacScale() {
@@ -77,7 +77,7 @@ func requantizeLongLine(is int, gc *core.GranuleChannelInfo, scalefactors *Scale
 	return signedPow43(is) * math.Pow(2.0, -float64(q)/4.0)
 }
 
-func requantizeShortLine(is int, gc *core.GranuleChannelInfo, scalefactors *Scalefactors, sfb int, win int) float64 {
+func requantizeShortLine(is int, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, sfb int, win int) float64 {
 	scalefacMultiplier := 1
 	if gc.GetScalefacScale() {
 		scalefacMultiplier = 2

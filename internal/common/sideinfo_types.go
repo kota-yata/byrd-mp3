@@ -1,4 +1,4 @@
-package core
+package common
 
 type SideInfo struct {
 	MainDataBegin uint16

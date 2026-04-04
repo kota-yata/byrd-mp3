@@ -1,22 +1,22 @@
 package maindata
 
 import (
-	"byrd/internal/core"
+	"byrd/internal/common"
 	"bytes"
 	"testing"
 )
 
-type GranuleChannelInfo = core.GranuleChannelInfo
-type BlockType = core.BlockType
+type GranuleChannelInfo = common.GranuleChannelInfo
+type BlockType = common.BlockType
 
-const BlockTypeShort = core.BlockTypeShort
-const PURE_SHORT_REGION0_COUNT = core.PURE_SHORT_REGION0_COUNT
-const PURE_SHORT_REGION1_COUNT = core.PURE_SHORT_REGION1_COUNT
+const BlockTypeShort = common.BlockTypeShort
+const PURE_SHORT_REGION0_COUNT = common.PURE_SHORT_REGION0_COUNT
+const PURE_SHORT_REGION1_COUNT = common.PURE_SHORT_REGION1_COUNT
 
 var (
-	NewBitReader              = core.NewBitReader
-	baseTables                = core.BaseTables
-	SCALEFACTOR_BAND_INDICES  = core.SCALEFACTOR_BAND_INDICES
+	NewBitReader             = common.NewBitReader
+	baseTables               = common.BaseTables
+	SCALEFACTOR_BAND_INDICES = common.SCALEFACTOR_BAND_INDICES
 )
 
 func TestReadMainData_NoReservoir(t *testing.T) {
