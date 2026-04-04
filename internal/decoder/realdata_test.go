@@ -1,10 +1,10 @@
 package decoder
 
 import (
+	"bufio"
 	"byrd/internal/common"
 	"byrd/internal/header"
 	"byrd/internal/maindata"
-	"bufio"
 	"fmt"
 	"io"
 	"path/filepath"
