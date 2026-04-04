@@ -185,10 +185,9 @@ func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex in
 	}
 
 	var tableIndex int
-	longSyntax := !gc.GetWindowSwitching() || gc.GetBlockType() != BlockTypeShort
-	if longSyntax {
+	if !gc.GetWindowSwitching() {
 		region1StartSFB := int(gc.Region0Count) + 1
-		region2StartSFB := int(gc.Region0Count) + int(gc.Region1Count) + 2
+		region2StartSFB := int(gc.Region0Count) + int(gc.Region1Count) + 1
 		if region1StartSFB >= len(sfBands.Long) {
 			region1StartSFB = len(sfBands.Long) - 1
 		}
@@ -226,6 +225,131 @@ func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex in
 	return &table, nil
 }
 
-func ParseBigValues(br *BitReader, gc *GranuleChannelInfo, mainData []byte, scalefactors *Scalefactors) ([]byte, error) {
-	return nil, fmt.Errorf("ParseBigValues not implemented")
+func guardedReadBit(br *BitReader, limit int, scratch *uint32) error {
+	if br.pos+1 > limit {
+		return fmt.Errorf("huffman data exceeds part23 length: need 1 more bit, have %d", limit-br.pos)
+	}
+	return br.ReadBitsTo(scratch, 1)
+}
+
+func guardedReadBits(br *BitReader, limit int, n int, scratch *uint32) error {
+	if br.pos+n > limit {
+		return fmt.Errorf("huffman data exceeds part23 length: need %d more bits, have %d", n, limit-br.pos)
+	}
+	return br.ReadBitsTo(scratch, n)
+}
+
+func isHuffmanLeaf(v uint16) bool {
+	return v&0xFF00 == 0
+}
+
+func decodeHuffmanPair(br *BitReader, table *HuffmanTable, limit int, scratch *uint32) (int, int, error) {
+	if table == nil {
+		return 0, 0, fmt.Errorf("nil huffman table")
+	}
+	if len(table.Data) == 0 {
+		return 0, 0, fmt.Errorf("empty huffman table")
+	}
+
+	idx := 0
+	for {
+		if idx < 0 || idx >= len(table.Data) {
+			return 0, 0, fmt.Errorf("invalid huffman tree traversal")
+		}
+		node := table.Data[idx]
+		if isHuffmanLeaf(node) {
+			x := int((node >> 4) & 0xF)
+			y := int(node & 0xF)
+			if table.Linbits > 0 {
+				if x == 15 {
+					if err := guardedReadBits(br, limit, table.Linbits, scratch); err != nil {
+						return 0, 0, err
+					}
+					x += int(*scratch)
+				}
+				if y == 15 {
+					if err := guardedReadBits(br, limit, table.Linbits, scratch); err != nil {
+						return 0, 0, err
+					}
+					y += int(*scratch)
+				}
+			}
+			return x, y, nil
+		}
+
+		if err := guardedReadBit(br, limit, scratch); err != nil {
+			return 0, 0, err
+		}
+		if *scratch != 0 { // go right
+			for (table.Data[idx] & 0x00FF) >= 250 {
+				idx += int(table.Data[idx] & 0x00FF)
+				if idx < 0 || idx >= len(table.Data) {
+					return 0, 0, fmt.Errorf("invalid huffman tree traversal")
+				}
+			}
+			idx += int(table.Data[idx] & 0x00FF)
+		} else { // go left
+			for (table.Data[idx] >> 8) >= 250 {
+				idx += int(table.Data[idx] >> 8)
+				if idx < 0 || idx >= len(table.Data) {
+					return 0, 0, fmt.Errorf("invalid huffman tree traversal")
+				}
+			}
+			idx += int(table.Data[idx] >> 8)
+		}
+	}
+}
+
+func ParseBigValues(br *BitReader, sampleRate uint16, gc *GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
+	if br == nil {
+		return 0, fmt.Errorf("nil BitReader")
+	}
+	if gc == nil {
+		return 0, fmt.Errorf("nil granule channel info")
+	}
+	if spectralValues == nil {
+		return 0, fmt.Errorf("nil spectral values buffer")
+	}
+
+	lineCount := int(gc.BigValues) * 2
+	if lineCount > 576 {
+		return 0, fmt.Errorf("invalid big_values: %d", gc.BigValues)
+	}
+	if cap(*spectralValues) < lineCount {
+		*spectralValues = make([]int, 0, lineCount)
+	}
+	*spectralValues = (*spectralValues)[:0]
+
+	var scratch uint32
+	for line := 0; line < lineCount; line += 2 {
+		table, err := selectTable(sampleRate, gc, line)
+		if err != nil {
+			return line, err
+		}
+		x, y, err := decodeHuffmanPair(br, table, part23EndBit, &scratch)
+		if err != nil {
+			return line, err
+		}
+
+		if x != 0 {
+			if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
+				return line, err
+			}
+			if scratch == 1 {
+				x = -x
+			}
+		}
+		if y != 0 {
+			if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
+				return line, err
+			}
+			if scratch == 1 {
+				y = -y
+			}
+		}
+
+		*spectralValues = append(*spectralValues, x, y)
+	}
+
+	return len(*spectralValues), nil
 }

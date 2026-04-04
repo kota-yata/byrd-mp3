@@ -277,8 +277,8 @@ func TestSelectTable_LongBlock(t *testing.T) {
 		{0, 5},
 		{11, 5},
 		{12, 7},
-		{29, 7},
-		{30, 9},
+		{23, 7},
+		{24, 9},
 	} {
 		got, err := selectTable(44100, gc, tc.lineIndex)
 		if err != nil {
@@ -287,6 +287,22 @@ func TestSelectTable_LongBlock(t *testing.T) {
 		if got.Linbits != baseTables[tc.wantTable].Linbits || len(got.Data) != len(baseTables[tc.wantTable].Data) {
 			t.Fatalf("selectTable(%d) got table %+v, want table %d", tc.lineIndex, *got, tc.wantTable)
 		}
+	}
+}
+
+func TestSelectTable_LongBlock_Region1CountZero(t *testing.T) {
+	gc := &GranuleChannelInfo{
+		TableSelect:  [3]byte{5, 7, 9},
+		Region0Count: 1,
+		Region1Count: 0,
+	}
+
+	got, err := selectTable(48000, gc, 8)
+	if err != nil {
+		t.Fatalf("selectTable failed: %v", err)
+	}
+	if got.Linbits != baseTables[9].Linbits || len(got.Data) != len(baseTables[9].Data) {
+		t.Fatalf("line 8 got table %+v, want table 9", *got)
 	}
 }
 
@@ -330,5 +346,66 @@ func TestSelectTable_Invalid(t *testing.T) {
 	}
 	if _, err := selectTable(44100, gc, 0); err == nil {
 		t.Fatalf("expected unsupported table error")
+	}
+}
+
+func TestParseBigValues_Table1(t *testing.T) {
+	var bw bitWriter
+	// table1 codes:
+	// 01  + sign(1)          -> (-1, 0)
+	// 001 + sign(0)          -> (0, 1)
+	// 000 + sign(1) + sign(0)-> (-1, 1)
+	bw.write(2, 0b01)
+	bw.write(1, 1)
+	bw.write(3, 0b001)
+	bw.write(1, 0)
+	bw.write(3, 0b000)
+	bw.write(1, 1)
+	bw.write(1, 0)
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{
+		BigValues:    3,
+		TableSelect:  [3]byte{1, 1, 1},
+		Region0Count: 10,
+		Region1Count: 10,
+	}
+	var got []int
+
+	lines, err := ParseBigValues(br, 44100, gc, 12, &got)
+	if err != nil {
+		t.Fatalf("ParseBigValues failed: %v", err)
+	}
+	if lines != 6 {
+		t.Fatalf("decoded line count = %d, want 6", lines)
+	}
+	want := []int{-1, 0, 0, 1, -1, 1}
+	if len(got) != len(want) {
+		t.Fatalf("decoded big values length = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("decoded big values got %v, want %v", got, want)
+		}
+	}
+}
+
+func TestParseBigValues_RespectsPart23End(t *testing.T) {
+	var bw bitWriter
+	bw.write(2, 0b01)
+	bw.write(1, 1)
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{
+		BigValues:    1,
+		TableSelect:  [3]byte{1, 1, 1},
+		Region0Count: 10,
+		Region1Count: 10,
+	}
+	var got []int
+
+	_, err := ParseBigValues(br, 44100, gc, 2, &got)
+	if err == nil {
+		t.Fatalf("expected part23 limit error, got nil")
 	}
 }
