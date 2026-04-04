@@ -1,16 +1,20 @@
-package byrd
+package decoder
 
 import (
+	"byrd/internal/core"
+	"byrd/internal/header"
+	"byrd/internal/maindata"
 	"bufio"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 // Just to make sure no error occurs when parsing real MP3 data
 func TestParseOutputMP3RealData(t *testing.T) {
-	f, err := OpenMP3File("output.mp3")
+	f, err := OpenMP3File(filepath.Join("..", "..", "output.mp3"))
 	if err != nil {
 		t.Fatalf("failed to open output.mp3: %v", err)
 	}
@@ -23,8 +27,8 @@ func TestParseOutputMP3RealData(t *testing.T) {
 	frameIndex := 0
 
 	for {
-		var h MP3FrameHeader
-		err = ReadHeader(&h, r)
+		var h header.MP3FrameHeader
+		err = header.ReadHeader(&h, r)
 		if err == io.EOF {
 			break
 		}
@@ -48,8 +52,8 @@ func TestParseOutputMP3RealData(t *testing.T) {
 			t.Fatalf("frame %d: CRC validation failed", frameIndex)
 		}
 
-		sideInfoLen := GetSideInfoLength(&h)
-		sideInfo, err := ReadSideInfo(&h, r, sideInfoLen)
+		sideInfoLen := header.GetSideInfoLength(&h)
+		sideInfo, err := header.ReadSideInfo(&h, r, sideInfoLen)
 		if err != nil {
 			t.Fatalf("frame %d: failed to read side info: %v", frameIndex, err)
 		}
@@ -71,13 +75,13 @@ func TestParseOutputMP3RealData(t *testing.T) {
 		if err != nil {
 			t.Fatalf("frame %d: failed to read current frame main data: %v", frameIndex, err)
 		}
-		err = ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur, &mainData)
+		err = maindata.ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur, &mainData)
 		if err != nil {
 			t.Fatalf("frame %d: failed to reconstruct main data: %v", frameIndex, err)
 		}
 
 		channels := 2
-		if h.GetChannelMode() == ChannelModeMono {
+		if h.GetChannelMode() == header.ChannelModeMono {
 			channels = 1
 		}
 		frameSummary := []string{
@@ -103,32 +107,32 @@ func TestParseOutputMP3RealData(t *testing.T) {
 			frameSummary = append(frameSummary, fmt.Sprintf("ch=%d scfsi=%v", ch, sideInfo.SCFSI[ch]))
 		}
 
-		br := NewBitReader(mainData)
-		var prev [2]Scalefactors
+		br := core.NewBitReader(mainData)
+		var prev [2]maindata.Scalefactors
 		var spectralValues [2][576]int
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
-				part23Start := br.pos
+				part23Start := br.Pos
 				part23End := part23Start + int(gc.Part23Length)
-				var scalefactors Scalefactors
-				var prevPtr *Scalefactors
+				var scalefactors maindata.Scalefactors
+				var prevPtr *maindata.Scalefactors
 				if gr == 1 {
 					prevPtr = &prev[ch]
 				}
 
-				part2Bits, err := ParseScaleFactor(br, gc, sideInfo.SCFSI[ch], gr, prevPtr, &scalefactors)
+				part2Bits, err := maindata.ParseScaleFactor(br, gc, sideInfo.SCFSI[ch], gr, prevPtr, &scalefactors)
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse scalefactors: %v", frameIndex, gr, ch, err)
 				}
 				prev[ch] = scalefactors
 
 				spectralBuffer := spectralValues[ch][:]
-				bigValueLines, err := ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralBuffer)
+				bigValueLines, err := maindata.ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralBuffer)
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse big values: %v", frameIndex, gr, ch, err)
 				}
-				count1Lines, err := ParseCount1Values(br, gc, part23End, &spectralBuffer)
+				count1Lines, err := maindata.ParseCount1Values(br, gc, part23End, &spectralBuffer)
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse count1 values: %v", frameIndex, gr, ch, err)
 				}
@@ -159,8 +163,8 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					576,
 				))
 
-				br.pos = part23End
-				if br.pos > len(mainData)*8 {
+				br.Pos = part23End
+				if br.Pos > len(mainData)*8 {
 					t.Fatalf("frame %d gr=%d ch=%d: part23 overruns main data bitstream", frameIndex, gr, ch)
 				}
 			}

@@ -1,4 +1,4 @@
-package byrd
+package core
 
 // Byrd only support MPEG-1 Layer III frames
 
@@ -362,7 +362,7 @@ var huffmanTable = []uint16{
 }
 
 // actual tables used for decoding
-var baseTables = map[int]HuffmanTable{
+var BaseTables = map[int]HuffmanTable{
 	1:  {Data: huffmanTable[0:7], Linbits: 0},
 	2:  {Data: huffmanTable[7:24], Linbits: 0},
 	3:  {Data: huffmanTable[24:41], Linbits: 0},
@@ -412,3 +412,5 @@ var SCALEFACTOR_BAND_INDICES = map[uint16]ScalefactorBandIndices{
 		Short: [14]int{0, 4, 8, 12, 16, 22, 28, 38, 50, 64, 80, 100, 126, 192},
 	},
 }
+
+var PRETAB = [21]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 3, 2}

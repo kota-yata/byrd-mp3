@@ -1,38 +1,25 @@
-package byrd
+package header
 
 import (
+	"byrd/internal/core"
 	"bufio"
 	"fmt"
 	"io"
 )
 
-type SideInfo struct {
-	MainDataBegin uint16     // start of the main data to jump back to the previous frames if not 0
-	SCFSI         [2][4]byte // bits to indicate if scalefactors are reused from previous granule for each band in each channel
-	Granule       [2][2]GranuleChannelInfo
-}
+type SideInfo = core.SideInfo
+type GranuleChannelInfo = core.GranuleChannelInfo
+type BlockType = core.BlockType
 
-type GranuleChannelInfo struct {
-	Part23Length     uint16 // total bit length of scalefactors and huffman-coded spectral information
-	BigValues        uint16 // number of pairs of spectral values coded in big value region
-	GlobalGain       byte   // used for dequantization
-	ScalefacCompress byte   // bit length of each scalefactor value
+const (
+	BlockTypeLong = core.BlockTypeLong
+	BlockTypeShort = core.BlockTypeShort
 
-	TableSelect  [3]byte
-	SubblockGain [3]byte
-	Region0Count byte
-	Region1Count byte
-	// WindowSwitching (1), BlockType(2), MixedBlockFlag(1), Preflag(1), ScalefacScale(1), Count1TableSelect(1), unused(1)
-	flags byte
-	// WindowSwitching indicates whether the block is short or long
-	// BlockType indicates the block type.
-	// MixedBlockFlag indicates whether the block is mixed (only valid if BlockTypeShort).
-}
-
-const PURE_SHORT_REGION0_COUNT = 8
-const PURE_SHORT_REGION1_COUNT = 12
-const MIXED_BLOCK_REGION0_COUNT = 7
-const MIXED_BLOCK_REGION1_COUNT = 13
+	PURE_SHORT_REGION0_COUNT  = core.PURE_SHORT_REGION0_COUNT
+	PURE_SHORT_REGION1_COUNT  = core.PURE_SHORT_REGION1_COUNT
+	MIXED_BLOCK_REGION0_COUNT = core.MIXED_BLOCK_REGION0_COUNT
+	MIXED_BLOCK_REGION1_COUNT = core.MIXED_BLOCK_REGION1_COUNT
+)
 
 func GetSideInfoLength(h *MP3FrameHeader) int {
 	if h.GetChannelMode() == ChannelModeMono {
@@ -52,7 +39,7 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 		h.crcTarget = append(h.crcTarget, buf...)
 	}
 
-	br := NewBitReader(buf)
+	br := core.NewBitReader(buf)
 	si := &SideInfo{}
 
 	v, err := br.ReadBits(9)
@@ -206,64 +193,4 @@ func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) 
 	}
 
 	return si, nil
-}
-
-// getter/setter functions for the flag
-
-func (g *GranuleChannelInfo) SetWindowSwitching(v bool) {
-	g.flags &^= 1 << 7
-	if v {
-		g.flags |= 1 << 7
-	}
-}
-func (g *GranuleChannelInfo) GetWindowSwitching() bool {
-	return (g.flags>>7)&1 == 1
-}
-
-func (g *GranuleChannelInfo) SetBlockType(v BlockType) {
-	g.flags &^= 0b11 << 5
-	g.flags |= (byte(v) & 0b11) << 5
-}
-func (g *GranuleChannelInfo) GetBlockType() BlockType {
-	return BlockType((g.flags >> 5) & 0b11)
-}
-
-func (g *GranuleChannelInfo) SetMixedBlockFlag(v bool) {
-	g.flags &^= 1 << 4
-	if v {
-		g.flags |= 1 << 4
-	}
-}
-func (g *GranuleChannelInfo) GetMixedBlockFlag() bool {
-	return (g.flags>>4)&1 == 1
-}
-
-func (g *GranuleChannelInfo) SetPreflag(v bool) {
-	g.flags &^= 1 << 3
-	if v {
-		g.flags |= 1 << 3
-	}
-}
-func (g *GranuleChannelInfo) GetPreflag() bool {
-	return (g.flags>>3)&1 == 1
-}
-
-func (g *GranuleChannelInfo) SetScalefacScale(v bool) {
-	g.flags &^= 1 << 2
-	if v {
-		g.flags |= 1 << 2
-	}
-}
-func (g *GranuleChannelInfo) GetScalefacScale() bool {
-	return (g.flags>>2)&1 == 1
-}
-
-func (g *GranuleChannelInfo) SetCount1TableSelect(v bool) {
-	g.flags &^= 1 << 1
-	if v {
-		g.flags |= 1 << 1
-	}
-}
-func (g *GranuleChannelInfo) GetCount1TableSelect() bool {
-	return (g.flags>>1)&1 == 1
 }

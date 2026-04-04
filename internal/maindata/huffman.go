@@ -1,10 +1,11 @@
-package byrd
+package maindata
 
 import (
+	"byrd/internal/core"
 	"fmt"
 )
 
-func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex int) (*HuffmanTable, error) {
+func selectTable(sampleRate uint16, gc *core.GranuleChannelInfo, spectralLineIndex int) (*core.HuffmanTable, error) {
 	if gc == nil {
 		return nil, fmt.Errorf("nil granule channel info")
 	}
@@ -12,7 +13,7 @@ func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex in
 		return nil, fmt.Errorf("invalid spectral line index: %d", spectralLineIndex)
 	}
 
-	sfBands, ok := SCALEFACTOR_BAND_INDICES[sampleRate]
+	sfBands, ok := core.SCALEFACTOR_BAND_INDICES[sampleRate]
 	if !ok {
 		return nil, fmt.Errorf("unsupported sample rate for scalefactor bands: %d", sampleRate)
 	}
@@ -48,7 +49,7 @@ func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex in
 		}
 	}
 
-	table, ok := baseTables[tableIndex]
+	table, ok := core.BaseTables[tableIndex]
 	if !ok {
 		return nil, fmt.Errorf("unknown huffman table: %d", tableIndex)
 	}
@@ -58,16 +59,16 @@ func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex in
 	return &table, nil
 }
 
-func guardedReadBit(br *BitReader, limit int, scratch *uint32) error {
-	if br.pos+1 > limit {
-		return fmt.Errorf("huffman data exceeds part23 length: need 1 more bit, have %d", limit-br.pos)
+func guardedReadBit(br *core.BitReader, limit int, scratch *uint32) error {
+	if br.Pos+1 > limit {
+		return fmt.Errorf("huffman data exceeds part23 length: need 1 more bit, have %d", limit-br.Pos)
 	}
 	return br.ReadBitsTo(scratch, 1)
 }
 
-func guardedReadBits(br *BitReader, limit int, n int, scratch *uint32) error {
-	if br.pos+n > limit {
-		return fmt.Errorf("huffman data exceeds part23 length: need %d more bits, have %d", n, limit-br.pos)
+func guardedReadBits(br *core.BitReader, limit int, n int, scratch *uint32) error {
+	if br.Pos+n > limit {
+		return fmt.Errorf("huffman data exceeds part23 length: need %d more bits, have %d", n, limit-br.Pos)
 	}
 	return br.ReadBitsTo(scratch, n)
 }
@@ -76,7 +77,7 @@ func isHuffmanLeaf(v uint16) bool {
 	return v&0xFF00 == 0
 }
 
-func decodeHuffmanPair(br *BitReader, table *HuffmanTable, limit int, scratch *uint32) (int, int, error) {
+func decodeHuffmanPair(br *core.BitReader, table *core.HuffmanTable, limit int, scratch *uint32) (int, int, error) {
 	if table == nil {
 		return 0, 0, fmt.Errorf("nil huffman table")
 	}
@@ -133,7 +134,7 @@ func decodeHuffmanPair(br *BitReader, table *HuffmanTable, limit int, scratch *u
 	}
 }
 
-func decodeHuffmanQuad(br *BitReader, table *HuffmanTable, limit int, scratch *uint32) (int, int, int, int, error) {
+func decodeHuffmanQuad(br *core.BitReader, table *core.HuffmanTable, limit int, scratch *uint32) (int, int, int, int, error) {
 	if table == nil {
 		return 0, 0, 0, 0, fmt.Errorf("nil huffman table")
 	}

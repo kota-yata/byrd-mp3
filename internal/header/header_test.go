@@ -1,4 +1,4 @@
-package byrd
+package header
 
 import (
 	"bufio"

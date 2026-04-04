@@ -1,4 +1,4 @@
-package byrd
+package core
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 type BitReader struct {
 	data []byte
-	pos  int // bit position
+	Pos  int // bit position
 }
 
 func NewBitReader(data []byte) *BitReader {
@@ -33,18 +33,18 @@ func (r *BitReader) ReadBitsTo(dst *uint32, n int) error {
 	if n <= 0 || n > 32 {
 		return fmt.Errorf("invalid bit count: %d", n)
 	}
-	if r.pos+n > len(r.data)*8 {
+	if r.Pos+n > len(r.data)*8 {
 		return io.ErrUnexpectedEOF
 	}
 
 	var v uint32
 	for i := 0; i < n; i++ {
-		byteIdx := (r.pos + i) / 8
-		bitIdx := 7 - ((r.pos + i) % 8)
+		byteIdx := (r.Pos + i) / 8
+		bitIdx := 7 - ((r.Pos + i) % 8)
 		bit := (r.data[byteIdx] >> bitIdx) & 0b1
 		v = (v << 1) | uint32(bit)
 	}
-	r.pos += n
+	r.Pos += n
 	*dst = v
 	return nil
 }

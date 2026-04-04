@@ -1,4 +1,4 @@
-package byrd
+package core
 
 type ChannelMode uint8
 

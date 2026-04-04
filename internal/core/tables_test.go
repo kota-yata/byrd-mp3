@@ -1,26 +1,26 @@
-package byrd
+package core
 
 import "testing"
 
 func TestBaseTables(t *testing.T) {
 	for i := 1; i <= 33; i++ {
-		if _, ok := baseTables[i]; !ok {
+		if _, ok := BaseTables[i]; !ok {
 			t.Fatalf("baseTables missing key %d", i)
 		}
 	}
 
-	if got := baseTables[4]; got.Data != nil || got.Linbits != 0 {
+	if got := BaseTables[4]; got.Data != nil || got.Linbits != 0 {
 		t.Fatalf("table 4 got %+v, want nil data and linbits 0", got)
 	}
-	if got := baseTables[14]; got.Data != nil || got.Linbits != 0 {
+	if got := BaseTables[14]; got.Data != nil || got.Linbits != 0 {
 		t.Fatalf("table 14 got %+v, want nil data and linbits 0", got)
 	}
 
-	if len(baseTables[16].Data) != len(baseTables[23].Data) {
-		t.Fatalf("table 16/23 data length mismatch: %d vs %d", len(baseTables[16].Data), len(baseTables[23].Data))
+	if len(BaseTables[16].Data) != len(BaseTables[23].Data) {
+		t.Fatalf("table 16/23 data length mismatch: %d vs %d", len(BaseTables[16].Data), len(BaseTables[23].Data))
 	}
-	if len(baseTables[24].Data) != len(baseTables[31].Data) {
-		t.Fatalf("table 24/31 data length mismatch: %d vs %d", len(baseTables[24].Data), len(baseTables[31].Data))
+	if len(BaseTables[24].Data) != len(BaseTables[31].Data) {
+		t.Fatalf("table 24/31 data length mismatch: %d vs %d", len(BaseTables[24].Data), len(BaseTables[31].Data))
 	}
 
 	for _, tc := range []struct {
@@ -35,7 +35,7 @@ func TestBaseTables(t *testing.T) {
 		{32, 0},
 		{33, 0},
 	} {
-		if got := baseTables[tc.table].Linbits; got != tc.linbits {
+		if got := BaseTables[tc.table].Linbits; got != tc.linbits {
 			t.Fatalf("table %d linbits got %d, want %d", tc.table, got, tc.linbits)
 		}
 	}
@@ -52,7 +52,7 @@ func TestBaseTables(t *testing.T) {
 		{32, 0x0201, 31},
 		{33, 0x1001, 31},
 	} {
-		got := baseTables[tc.table]
+		got := BaseTables[tc.table]
 		if len(got.Data) != tc.size {
 			t.Fatalf("table %d size got %d, want %d", tc.table, len(got.Data), tc.size)
 		}

@@ -1,6 +1,7 @@
-package byrd
+package maindata
 
 import (
+	"byrd/internal/core"
 	"fmt"
 	"strings"
 )
@@ -66,12 +67,12 @@ type Scalefactors struct {
 	Short [12][3]uint8 // 12 bands for short blocks, each with 3 windows
 }
 
-func readScalefactorBits(br *BitReader, limit int, width int, scratch *uint32) (uint8, error) {
+func readScalefactorBits(br *core.BitReader, limit int, width int, scratch *uint32) (uint8, error) {
 	if width == 0 {
 		return 0, nil
 	}
-	if br.pos+width > limit {
-		return 0, fmt.Errorf("scalefactors exceed part23 length: need %d more bits, have %d", width, limit-br.pos)
+	if br.Pos+width > limit {
+		return 0, fmt.Errorf("scalefactors exceed part23 length: need %d more bits, have %d", width, limit-br.Pos)
 	}
 	if err := br.ReadBitsTo(scratch, width); err != nil {
 		return 0, err
@@ -79,7 +80,7 @@ func readScalefactorBits(br *BitReader, limit int, width int, scratch *uint32) (
 	return uint8(*scratch), nil
 }
 
-func readLongScalefactorRange(br *BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
+func readLongScalefactorRange(br *core.BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
 	for sfb := from; sfb <= to; sfb++ {
 		v, err := readScalefactorBits(br, limit, width, scratch)
 		if err != nil {
@@ -90,7 +91,7 @@ func readLongScalefactorRange(br *BitReader, limit int, width int, from int, to 
 	return nil
 }
 
-func readShortScalefactorRange(br *BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
+func readShortScalefactorRange(br *core.BitReader, limit int, width int, from int, to int, dst *Scalefactors, scratch *uint32) error {
 	for sfb := from; sfb <= to; sfb++ {
 		for win := range SCALEFACTOR_SHORT_WINDOW_COUNT {
 			v, err := readScalefactorBits(br, limit, width, scratch)
@@ -103,7 +104,7 @@ func readShortScalefactorRange(br *BitReader, limit int, width int, from int, to
 	return nil
 }
 
-func ParseScaleFactor(br *BitReader, gc *GranuleChannelInfo, scfsi [4]byte, granule int, prev *Scalefactors, scaleFactors *Scalefactors) (int, error) {
+func ParseScaleFactor(br *core.BitReader, gc *core.GranuleChannelInfo, scfsi [4]byte, granule int, prev *Scalefactors, scaleFactors *Scalefactors) (int, error) {
 	if br == nil {
 		return 0, fmt.Errorf("nil BitReader")
 	}
@@ -116,17 +117,17 @@ func ParseScaleFactor(br *BitReader, gc *GranuleChannelInfo, scfsi [4]byte, gran
 	if granule < 0 || granule > 1 {
 		return 0, fmt.Errorf("invalid granule index: %d", granule)
 	}
-	if int(gc.ScalefacCompress) >= len(SCALEFACTOR_COMPRESS) {
+	if int(gc.ScalefacCompress) >= len(core.SCALEFACTOR_COMPRESS) {
 		return 0, fmt.Errorf("invalid scalefactor_compress: %d", gc.ScalefacCompress)
 	}
 
 	*scaleFactors = Scalefactors{}
-	start := br.pos
+	start := br.Pos
 	limit := start + int(gc.Part23Length)
-	slen := SCALEFACTOR_COMPRESS[gc.ScalefacCompress]
+	slen := core.SCALEFACTOR_COMPRESS[gc.ScalefacCompress]
 	var scratch uint32
 
-	longSyntax := !gc.GetWindowSwitching() || BlockType(gc.GetBlockType()) != BlockTypeShort
+	longSyntax := !gc.GetWindowSwitching() || core.BlockType(gc.GetBlockType()) != core.BlockTypeShort
 	switch {
 	case longSyntax:
 		groups := [...]struct {
@@ -169,10 +170,10 @@ func ParseScaleFactor(br *BitReader, gc *GranuleChannelInfo, scfsi [4]byte, gran
 		}
 	}
 
-	return br.pos - start, nil
+	return br.Pos - start, nil
 }
 
-func ParseBigValues(br *BitReader, sampleRate uint16, gc *GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
+func ParseBigValues(br *core.BitReader, sampleRate uint16, gc *core.GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
 	if br == nil {
 		return 0, fmt.Errorf("nil BitReader")
 	}
@@ -229,7 +230,7 @@ func ParseBigValues(br *BitReader, sampleRate uint16, gc *GranuleChannelInfo, pa
 	return lineCount, nil
 }
 
-func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
+func ParseCount1Values(br *core.BitReader, gc *core.GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
 	if br == nil {
 		return 0, fmt.Errorf("nil BitReader")
 	}
@@ -244,7 +245,7 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 	if gc.GetCount1TableSelect() {
 		tableIndex = 33
 	}
-	table, ok := baseTables[tableIndex]
+	table, ok := core.BaseTables[tableIndex]
 	if !ok || table.Data == nil {
 		return 0, fmt.Errorf("unsupported count1 huffman table: %d", tableIndex)
 	}
@@ -260,15 +261,15 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 		return 0, fmt.Errorf("invalid big_values: %d", gc.BigValues)
 	}
 	writePos := startLine
-	for br.pos < part23EndBit {
+	for br.Pos < part23EndBit {
 		if writePos >= 576 || writePos+4 > 576 {
 			break
 		}
-		startPos := br.pos
+		startPos := br.Pos
 
 		v, w, x, y, err := decodeHuffmanQuad(br, &table, part23EndBit, &scratch)
 		if err != nil {
-			br.pos = startPos
+			br.Pos = startPos
 			if strings.HasPrefix(err.Error(), "huffman data exceeds part23 length") {
 				break
 			}
@@ -279,7 +280,7 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 		for i := range values {
 			if values[i] != 0 {
 				if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
-					br.pos = startPos
+					br.Pos = startPos
 					if strings.HasPrefix(err.Error(), "huffman data exceeds part23 length") {
 						return writePos - startLine, nil
 					}
@@ -296,4 +297,15 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 	}
 
 	return writePos - startLine, nil
+}
+
+func FillRZeroValues(spectralValues *[]int) error {
+	if spectralValues == nil {
+		return fmt.Errorf("nil spectral values buffer")
+	}
+	if cap(*spectralValues) < 576 {
+		return fmt.Errorf("spectral values buffer too small: cap=%d", cap(*spectralValues))
+	}
+	*spectralValues = (*spectralValues)[:576]
+	return nil
 }
