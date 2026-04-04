@@ -370,7 +370,7 @@ func TestParseBigValues_Table1(t *testing.T) {
 		Region0Count: 10,
 		Region1Count: 10,
 	}
-	var got []int
+	got := make([]int, 576)
 
 	lines, err := ParseBigValues(br, 44100, gc, 12, &got)
 	if err != nil {
@@ -380,12 +380,17 @@ func TestParseBigValues_Table1(t *testing.T) {
 		t.Fatalf("decoded line count = %d, want 6", lines)
 	}
 	want := []int{-1, 0, 0, 1, -1, 1}
-	if len(got) != len(want) {
-		t.Fatalf("decoded big values length = %d, want %d", len(got), len(want))
+	if len(got) != 576 {
+		t.Fatalf("decoded big values length = %d, want 576", len(got))
 	}
 	for i := range want {
 		if got[i] != want[i] {
-			t.Fatalf("decoded big values got %v, want %v", got, want)
+			t.Fatalf("decoded big values prefix got %v, want %v", got[:len(want)], want)
+		}
+	}
+	for i := len(want); i < len(got); i++ {
+		if got[i] != 0 {
+			t.Fatalf("decoded big values should remain zero padded at %d: got %d", i, got[i])
 		}
 	}
 }
@@ -402,7 +407,7 @@ func TestParseBigValues_RespectsPart23End(t *testing.T) {
 		Region0Count: 10,
 		Region1Count: 10,
 	}
-	var got []int
+	got := make([]int, 576)
 
 	_, err := ParseBigValues(br, 44100, gc, 2, &got)
 	if err == nil {
@@ -420,7 +425,10 @@ func TestParseCount1Values_Table33(t *testing.T) {
 	br := NewBitReader(bw.bytes())
 	gc := &GranuleChannelInfo{}
 	gc.SetCount1TableSelect(true)
-	got := []int{9, 8}
+	got := make([]int, 576)
+	got[0] = 9
+	got[1] = 8
+	gc.BigValues = 1
 
 	lines, err := ParseCount1Values(br, gc, 6, &got)
 	if err != nil {
@@ -430,12 +438,17 @@ func TestParseCount1Values_Table33(t *testing.T) {
 		t.Fatalf("decoded line count = %d, want 4", lines)
 	}
 	want := []int{9, 8, 0, -1, 0, 1}
-	if len(got) != len(want) {
-		t.Fatalf("decoded count1 values length = %d, want %d", len(got), len(want))
+	if len(got) != 576 {
+		t.Fatalf("decoded count1 values length = %d, want 576", len(got))
 	}
 	for i := range want {
 		if got[i] != want[i] {
-			t.Fatalf("decoded count1 values got %v, want %v", got, want)
+			t.Fatalf("decoded count1 values prefix got %v, want %v", got[:len(want)], want)
+		}
+	}
+	for i := len(want); i < len(got); i++ {
+		if got[i] != 0 {
+			t.Fatalf("decoded count1 values should remain zero padded at %d: got %d", i, got[i])
 		}
 	}
 }
@@ -447,7 +460,7 @@ func TestParseCount1Values_RespectsPart23End(t *testing.T) {
 	br := NewBitReader(bw.bytes())
 	gc := &GranuleChannelInfo{}
 	gc.SetCount1TableSelect(true)
-	var got []int
+	got := make([]int, 576)
 
 	lines, err := ParseCount1Values(br, gc, 3, &got)
 	if err != nil {
@@ -455,22 +468,5 @@ func TestParseCount1Values_RespectsPart23End(t *testing.T) {
 	}
 	if lines != 0 {
 		t.Fatalf("decoded line count = %d, want 0", lines)
-	}
-}
-
-func TestFillRZeroValues(t *testing.T) {
-	got := []int{1, -2, 3}
-
-	if err := FillRZeroValues(&got); err != nil {
-		t.Fatalf("FillRZeroValues failed: %v", err)
-	}
-	if len(got) != 576 {
-		t.Fatalf("filled spectral values length = %d, want 576", len(got))
-	}
-	wantPrefix := []int{1, -2, 3, 0, 0, 0}
-	for i, want := range wantPrefix {
-		if got[i] != want {
-			t.Fatalf("filled spectral values prefix got %v, want prefix %v", got[:len(wantPrefix)], wantPrefix)
-		}
 	}
 }

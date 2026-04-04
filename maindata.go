@@ -187,10 +187,12 @@ func ParseBigValues(br *BitReader, sampleRate uint16, gc *GranuleChannelInfo, pa
 	if lineCount > 576 {
 		return 0, fmt.Errorf("invalid big_values: %d", gc.BigValues)
 	}
-	if cap(*spectralValues) < lineCount {
-		*spectralValues = make([]int, 0, lineCount)
+	if cap(*spectralValues) < 576 {
+		*spectralValues = make([]int, 576)
+	} else {
+		*spectralValues = (*spectralValues)[:576]
 	}
-	*spectralValues = (*spectralValues)[:0]
+	clear(*spectralValues)
 
 	var scratch uint32
 	for line := 0; line < lineCount; line += 2 {
@@ -220,10 +222,11 @@ func ParseBigValues(br *BitReader, sampleRate uint16, gc *GranuleChannelInfo, pa
 			}
 		}
 
-		*spectralValues = append(*spectralValues, x, y)
+		(*spectralValues)[line] = x
+		(*spectralValues)[line+1] = y
 	}
 
-	return len(*spectralValues), nil
+	return lineCount, nil
 }
 
 func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, spectralValues *[]int) (int, error) {
@@ -247,9 +250,18 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 	}
 
 	var scratch uint32
-	startLen := len(*spectralValues)
+	if cap(*spectralValues) < 576 {
+		*spectralValues = make([]int, 576)
+	} else {
+		*spectralValues = (*spectralValues)[:576]
+	}
+	startLine := int(gc.BigValues) * 2
+	if startLine > 576 {
+		return 0, fmt.Errorf("invalid big_values: %d", gc.BigValues)
+	}
+	writePos := startLine
 	for br.pos < part23EndBit {
-		if len(*spectralValues) >= 576 || len(*spectralValues)+4 > 576 {
+		if writePos >= 576 || writePos+4 > 576 {
 			break
 		}
 		startPos := br.pos
@@ -260,7 +272,7 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 			if strings.HasPrefix(err.Error(), "huffman data exceeds part23 length") {
 				break
 			}
-			return len(*spectralValues) - startLen, err
+			return writePos - startLine, err
 		}
 
 		values := [4]int{v, w, x, y}
@@ -269,9 +281,9 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 				if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
 					br.pos = startPos
 					if strings.HasPrefix(err.Error(), "huffman data exceeds part23 length") {
-						return len(*spectralValues) - startLen, nil
+						return writePos - startLine, nil
 					}
-					return len(*spectralValues) - startLen, err
+					return writePos - startLine, err
 				}
 				if scratch == 1 {
 					values[i] = -values[i]
@@ -279,28 +291,9 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 			}
 		}
 
-		*spectralValues = append(*spectralValues, values[:]...)
+		copy((*spectralValues)[writePos:], values[:])
+		writePos += len(values)
 	}
 
-	return len(*spectralValues) - startLen, nil
-}
-
-func FillRZeroValues(spectralValues *[]int) error {
-	if spectralValues == nil {
-		return fmt.Errorf("nil spectral values buffer")
-	}
-	if len(*spectralValues) > 576 {
-		return fmt.Errorf("spectral values exceed 576 lines: %d", len(*spectralValues))
-	}
-	if len(*spectralValues) == 576 {
-		return nil
-	}
-	if cap(*spectralValues) < 576 {
-		buf := make([]int, len(*spectralValues), 576)
-		copy(buf, *spectralValues)
-		*spectralValues = buf
-	}
-	zeroLines := 576 - len(*spectralValues)
-	*spectralValues = append(*spectralValues, make([]int, zeroLines)...)
-	return nil
+	return writePos - startLine, nil
 }

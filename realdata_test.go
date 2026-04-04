@@ -105,7 +105,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 
 		br := NewBitReader(mainData)
 		var prev [2]Scalefactors
-		var spectralValues [2][]int
+		var spectralValues [2][576]int
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
@@ -123,18 +123,15 @@ func TestParseOutputMP3RealData(t *testing.T) {
 				}
 				prev[ch] = scalefactors
 
-				bigValueLines, err := ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralValues[ch])
+				spectralBuffer := spectralValues[ch][:]
+				bigValueLines, err := ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralBuffer)
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse big values: %v", frameIndex, gr, ch, err)
 				}
-				count1Lines, err := ParseCount1Values(br, gc, part23End, &spectralValues[ch])
+				count1Lines, err := ParseCount1Values(br, gc, part23End, &spectralBuffer)
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse count1 values: %v", frameIndex, gr, ch, err)
 				}
-				if err := FillRZeroValues(&spectralValues[ch]); err != nil {
-					t.Fatalf("frame %d gr=%d ch=%d: failed to fill rzero values: %v", frameIndex, gr, ch, err)
-				}
-
 				frameSummary = append(frameSummary, fmt.Sprintf(
 					"gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectralLines=%d",
 					gr,
@@ -159,7 +156,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					gc.GetCount1TableSelect(),
 					scalefactors.Long,
 					scalefactors.Short,
-					len(spectralValues[ch]),
+					576,
 				))
 
 				br.pos = part23End
