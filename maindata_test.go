@@ -457,3 +457,20 @@ func TestParseCount1Values_RespectsPart23End(t *testing.T) {
 		t.Fatalf("decoded line count = %d, want 0", lines)
 	}
 }
+
+func TestFillRZeroValues(t *testing.T) {
+	got := []int{1, -2, 3}
+
+	if err := FillRZeroValues(&got); err != nil {
+		t.Fatalf("FillRZeroValues failed: %v", err)
+	}
+	if len(got) != 576 {
+		t.Fatalf("filled spectral values length = %d, want 576", len(got))
+	}
+	wantPrefix := []int{1, -2, 3, 0, 0, 0}
+	for i, want := range wantPrefix {
+		if got[i] != want {
+			t.Fatalf("filled spectral values prefix got %v, want prefix %v", got[:len(wantPrefix)], wantPrefix)
+		}
+	}
+}

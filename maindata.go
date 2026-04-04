@@ -284,3 +284,23 @@ func ParseCount1Values(br *BitReader, gc *GranuleChannelInfo, part23EndBit int, 
 
 	return len(*spectralValues) - startLen, nil
 }
+
+func FillRZeroValues(spectralValues *[]int) error {
+	if spectralValues == nil {
+		return fmt.Errorf("nil spectral values buffer")
+	}
+	if len(*spectralValues) > 576 {
+		return fmt.Errorf("spectral values exceed 576 lines: %d", len(*spectralValues))
+	}
+	if len(*spectralValues) == 576 {
+		return nil
+	}
+	if cap(*spectralValues) < 576 {
+		buf := make([]int, len(*spectralValues), 576)
+		copy(buf, *spectralValues)
+		*spectralValues = buf
+	}
+	zeroLines := 576 - len(*spectralValues)
+	*spectralValues = append(*spectralValues, make([]int, zeroLines)...)
+	return nil
+}

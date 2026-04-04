@@ -105,6 +105,11 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					fmt.Printf("failed to parse count1 values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
+				err = FillRZeroValues(&spectralValues[gr][ch])
+				if err != nil {
+					fmt.Printf("failed to fill rzero values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
 
 				br.pos = part23End
 				if br.pos > len(mainData)*8 {

@@ -129,6 +129,9 @@ func TestParseOutputMP3RealData(t *testing.T) {
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse count1 values: %v", frameIndex, gr, ch, err)
 				}
+				if err := FillRZeroValues(&spectralValues[ch]); err != nil {
+					t.Fatalf("frame %d gr=%d ch=%d: failed to fill rzero values: %v", frameIndex, gr, ch, err)
+				}
 
 				t.Logf(
 					"frame=%d gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectral=%v",
