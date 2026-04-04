@@ -130,8 +130,6 @@ func ReadHeader(h *MP3FrameHeader, reader *bufio.Reader) error {
 	}
 }
 
-// TODO: read payload
-
 // Layer III frame length = (144 * Bitrate / SampleRate) + Padding
 // the magic number 144 is derived from 1152 samples per frame and 8 bits
 func (h *MP3FrameHeader) GetFrameLength() (int, error) {
