@@ -10,12 +10,18 @@ import (
 )
 
 type ChannelMode = common.ChannelMode
+type ModeExtension = common.ModeExtension
 
 const (
 	ChannelModeStereo      = common.ChannelModeStereo
 	ChannelModeJointStereo = common.ChannelModeJointStereo
 	ChannelModeDualChannel = common.ChannelModeDualChannel
 	ChannelModeMono        = common.ChannelModeMono
+
+	ModeExtensionNone            = common.ModeExtensionNone
+	ModeExtensionIntensityStereo = common.ModeExtensionIntensityStereo
+	ModeExtensionMSStereo        = common.ModeExtensionMSStereo
+	ModeExtensionIntensityAndMS  = common.ModeExtensionIntensityAndMS
 )
 
 type MP3FrameHeader struct {
@@ -177,11 +183,11 @@ func (h *MP3FrameHeader) GetChannelMode() ChannelMode {
 	return ChannelMode((h.flag2 >> 6) & 0b11)
 }
 
-func (h *MP3FrameHeader) GetModeExtension() byte {
+func (h *MP3FrameHeader) GetModeExtension() ModeExtension {
 	if h.GetChannelMode() != ChannelModeJointStereo {
-		return 0
+		return ModeExtensionNone
 	}
-	return (h.flag2 >> 4) & 0b11
+	return ModeExtension((h.flag2 >> 4) & 0b11)
 }
 
 func (h *MP3FrameHeader) IsCopyrighted() bool {

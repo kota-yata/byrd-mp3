@@ -24,6 +24,30 @@ func (m ChannelMode) String() string {
 	}
 }
 
+type ModeExtension uint8
+
+const (
+	ModeExtensionNone             ModeExtension = 0b00
+	ModeExtensionIntensityStereo  ModeExtension = 0b01
+	ModeExtensionMSStereo         ModeExtension = 0b10
+	ModeExtensionIntensityAndMS   ModeExtension = 0b11
+)
+
+func (m ModeExtension) String() string {
+	switch m {
+	case ModeExtensionNone:
+		return "None"
+	case ModeExtensionIntensityStereo:
+		return "IntensityStereo"
+	case ModeExtensionMSStereo:
+		return "MSStereo"
+	case ModeExtensionIntensityAndMS:
+		return "IntensityAndMS"
+	default:
+		return "Unknown"
+	}
+}
+
 type BlockType uint8
 
 const (

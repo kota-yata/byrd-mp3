@@ -36,8 +36,8 @@ func TestReadHeader_NoCRC(t *testing.T) {
 	if got := h.GetChannelMode(); got != ChannelModeStereo {
 		t.Fatalf("channel mode got %s, want %s", got, ChannelModeStereo)
 	}
-	if got := h.GetModeExtension(); got != 0 {
-		t.Fatalf("mode extension got %d, want 0", got)
+	if got := h.GetModeExtension(); got != ModeExtensionNone {
+		t.Fatalf("mode extension got %s, want %s", got, ModeExtensionNone)
 	}
 	if got := h.IsCopyrighted(); got {
 		t.Fatalf("copyright got true, want false")
@@ -85,8 +85,8 @@ func TestReadHeader_WithCRC(t *testing.T) {
 	if got := h.GetChannelMode(); got != ChannelModeJointStereo {
 		t.Fatalf("channel mode got %s, want %s", got, ChannelModeJointStereo)
 	}
-	if got := h.GetModeExtension(); got != 2 {
-		t.Fatalf("mode extension got %d, want 2", got)
+	if got := h.GetModeExtension(); got != ModeExtensionMSStereo {
+		t.Fatalf("mode extension got %s, want %s", got, ModeExtensionMSStereo)
 	}
 	if got := h.IsCopyrighted(); !got {
 		t.Fatalf("copyright got false, want true")
