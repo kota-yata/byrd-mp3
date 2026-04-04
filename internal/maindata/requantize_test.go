@@ -8,7 +8,7 @@ import (
 
 func TestRequantize_LongBlock_ZeroInput(t *testing.T) {
 	gc := &common.GranuleChannelInfo{GlobalGain: 210}
-	var out []float64
+	out := make([]float64, 576)
 	if err := Requantize(44100, gc, &Scalefactors{}, make([]int, 576), &out); err != nil {
 		t.Fatalf("Requantize failed: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestRequantize_LongBlock_UsesPreflag(t *testing.T) {
 	sfs.Long[11] = 2
 	spectral := make([]int, 576)
 	spectral[62] = 3
-	var out []float64
+	out := make([]float64, 576)
 	if err := Requantize(44100, gc, sfs, spectral, &out); err != nil {
 		t.Fatalf("Requantize failed: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestRequantize_ShortBlock_UsesSubblockGain(t *testing.T) {
 	sfs.Short[0][1] = 3
 	spectral := make([]int, 576)
 	spectral[5] = -2
-	var out []float64
+	out := make([]float64, 576)
 	if err := Requantize(44100, gc, sfs, spectral, &out); err != nil {
 		t.Fatalf("Requantize failed: %v", err)
 	}
@@ -58,9 +58,18 @@ func TestRequantize_ShortBlock_UsesSubblockGain(t *testing.T) {
 
 func TestRequantize_InvalidInputLength(t *testing.T) {
 	gc := &common.GranuleChannelInfo{}
-	var out []float64
+	out := make([]float64, 576)
 	err := Requantize(44100, gc, &Scalefactors{}, []int{1}, &out)
 	if err == nil {
 		t.Fatalf("expected invalid input length error")
+	}
+}
+
+func TestRequantize_InvalidOutputLength(t *testing.T) {
+	gc := &common.GranuleChannelInfo{}
+	out := make([]float64, 0, 576)
+	err := Requantize(44100, gc, &Scalefactors{}, make([]int, 576), &out)
+	if err == nil {
+		t.Fatalf("expected invalid output length error")
 	}
 }

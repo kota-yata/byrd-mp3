@@ -7,11 +7,11 @@ import (
 )
 
 const (
-	mixedLongEndLine  = 36
+	mixedLongEndLine   = 36
 	mixedShortStartSFB = 3
 )
 
-// TODO: float64 is used here for correctness-first implementation; optimize to float32 or fixed-point later if needed.
+// TODO: float64 is used here. optimize to float32 or fixed-point later if slow.
 func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, spectralValues []int, out *[]float64) error {
 	if gc == nil {
 		return fmt.Errorf("nil granule channel info")
@@ -22,6 +22,9 @@ func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *
 	if out == nil {
 		return fmt.Errorf("nil output buffer")
 	}
+	if len(*out) != 576 {
+		return fmt.Errorf("invalid output buffer length: %d", len(*out))
+	}
 	if len(spectralValues) != 576 {
 		return fmt.Errorf("invalid spectral values length: %d", len(spectralValues))
 	}
@@ -30,11 +33,6 @@ func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *
 		return fmt.Errorf("unsupported sample rate for scalefactor bands: %d", sampleRate)
 	}
 
-	if cap(*out) < 576 {
-		*out = make([]float64, 576)
-	} else {
-		*out = (*out)[:576]
-	}
 	clear(*out)
 
 	for i, is := range spectralValues {
