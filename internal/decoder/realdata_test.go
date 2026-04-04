@@ -60,6 +60,13 @@ func runParseRealDataTest(t *testing.T, path string) {
 	var mainData []byte
 	frameIndex := 0
 	fileLabel := filepath.Base(path)
+	frameSummary := []string{}
+	logFrameSummary := func() {
+		if len(frameSummary) == 0 {
+			return
+		}
+		t.Logf("file=%s frame=%d %s", fileLabel, frameIndex, strings.Join(frameSummary, " | "))
+	}
 
 	for {
 		var h header.MP3FrameHeader
@@ -119,7 +126,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 		if h.GetChannelMode() == header.ChannelModeMono {
 			channels = 1
 		}
-		frameSummary := []string{
+		frameSummary = []string{
 			fmt.Sprintf(
 				"bitrate=%dkbps sampleRate=%d padding=%v hasCRC=%v channelMode=%s modeExt=%d copyright=%v original=%v emphasis=%d frameLen=%d sideInfoLen=%d mainDataBegin=%d mainDataLen=%d reservoirLen=%d",
 				bitrateKbps,
@@ -160,6 +167,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 
 				part2Bits, err := maindata.ParseScaleFactor(br, gc, sideInfo.SCFSI[ch], gr, prevPtr, &scalefactors)
 				if err != nil {
+					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to parse scalefactors: %v", fileLabel, frameIndex, gr, ch, err)
 				}
 				prev[ch] = scalefactors
@@ -167,18 +175,22 @@ func runParseRealDataTest(t *testing.T, path string) {
 				spectralBuffer := spectralValues[ch][:]
 				bigValueLines, err := maindata.ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralBuffer)
 				if err != nil {
+					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to parse big values: %v", fileLabel, frameIndex, gr, ch, err)
 				}
 				count1Lines, err := maindata.ParseCount1Values(br, gc, part23End, &spectralBuffer)
 				if err != nil {
+					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to parse count1 values: %v", fileLabel, frameIndex, gr, ch, err)
 				}
 				requantizedBuffer := requantizedValues[ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors, spectralBuffer, &requantizedBuffer); err != nil {
+					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to requantize values: %v", fileLabel, frameIndex, gr, ch, err)
 				}
 				reorderedBuffer := reorderedValues[ch][:]
 				if err := maindata.Reorder(h.GetSampleRate(), gc, requantizedBuffer, &reorderedBuffer); err != nil {
+					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to reorder values: %v", fileLabel, frameIndex, gr, ch, err)
 				}
 				nonZeroRequantized := 0
@@ -224,12 +236,11 @@ func runParseRealDataTest(t *testing.T, path string) {
 
 				br.Pos = part23End
 				if br.Pos > len(mainData)*8 {
+					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: part23 overruns main data bitstream", fileLabel, frameIndex, gr, ch)
 				}
 			}
 		}
-
-		t.Logf("file=%s frame=%d %s", fileLabel, frameIndex, strings.Join(frameSummary, " | "))
 		frameIndex++
 	}
 

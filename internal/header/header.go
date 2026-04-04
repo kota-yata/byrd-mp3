@@ -3,8 +3,8 @@ package header
 // MPEG-1 Layer III frame parser
 
 import (
-	"byrd/internal/common"
 	"bufio"
+	"byrd/internal/common"
 	"fmt"
 	"io"
 )
@@ -138,8 +138,7 @@ func (h *MP3FrameHeader) GetFrameLength() (int, error) {
 	if h.Padding() {
 		pad = 1
 	}
-
-	frameLength := (144 * int(bitrateKbps*1000) / int(sampleRate)) + pad
+	frameLength := (144 * int(bitrateKbps) * 1000 / int(sampleRate)) + pad
 	return frameLength, nil
 }
 

@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+var huffmanZeroTable = common.HuffmanTable{
+	Data: []uint16{0x0000},
+}
+
 func selectTable(sampleRate uint16, gc *common.GranuleChannelInfo, spectralLineIndex int) (*common.HuffmanTable, error) {
 	if gc == nil {
 		return nil, fmt.Errorf("nil granule channel info")
@@ -21,7 +25,7 @@ func selectTable(sampleRate uint16, gc *common.GranuleChannelInfo, spectralLineI
 	var tableIndex int
 	if !gc.GetWindowSwitching() {
 		region1StartSFB := int(gc.Region0Count) + 1
-		region2StartSFB := int(gc.Region0Count) + int(gc.Region1Count) + 1
+		region2StartSFB := int(gc.Region0Count) + int(gc.Region1Count) + 2
 		if region1StartSFB >= len(sfBands.Long) {
 			region1StartSFB = len(sfBands.Long) - 1
 		}
@@ -47,6 +51,10 @@ func selectTable(sampleRate uint16, gc *common.GranuleChannelInfo, spectralLineI
 		} else {
 			tableIndex = int(gc.TableSelect[1])
 		}
+	}
+
+	if tableIndex == 0 {
+		return &huffmanZeroTable, nil
 	}
 
 	table, ok := common.BaseTables[tableIndex]
