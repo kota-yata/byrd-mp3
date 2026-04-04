@@ -103,10 +103,12 @@ func TestParseOutputMP3RealData(t *testing.T) {
 
 		br := NewBitReader(mainData)
 		var prev [2]Scalefactors
+		var spectralValues [2][]int
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
 				part23Start := br.pos
+				part23End := part23Start + int(gc.Part23Length)
 				var scalefactors Scalefactors
 				var prevPtr *Scalefactors
 				if gr == 1 {
@@ -119,8 +121,13 @@ func TestParseOutputMP3RealData(t *testing.T) {
 				}
 				prev[ch] = scalefactors
 
+				bigValueLines, err := ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralValues[ch])
+				if err != nil {
+					t.Fatalf("frame %d gr=%d ch=%d: failed to parse big values: %v", frameIndex, gr, ch, err)
+				}
+
 				t.Logf(
-					"frame=%d gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v",
+					"frame=%d gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectral=%v",
 					frameIndex,
 					gr,
 					ch,
@@ -128,6 +135,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					part2Bits,
 					int(gc.Part23Length)-part2Bits,
 					gc.BigValues,
+					bigValueLines,
 					gc.GlobalGain,
 					gc.ScalefacCompress,
 					gc.TableSelect,
@@ -142,9 +150,10 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					gc.GetCount1TableSelect(),
 					scalefactors.Long,
 					scalefactors.Short,
+					spectralValues[ch],
 				)
 
-				br.pos = part23Start + int(gc.Part23Length)
+				br.pos = part23End
 				if br.pos > len(mainData)*8 {
 					t.Fatalf("frame %d gr=%d ch=%d: part23 overruns main data bitstream", frameIndex, gr, ch)
 				}
