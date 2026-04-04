@@ -171,28 +171,48 @@ func ParseScaleFactor(br *BitReader, gc *GranuleChannelInfo, scfsi [4]byte, gran
 	return br.pos - start, nil
 }
 
-func selectTable(gc *GranuleChannelInfo, byteIndex int) (*HuffmanTable, error) {
+func selectTable(sampleRate uint16, gc *GranuleChannelInfo, spectralLineIndex int) (*HuffmanTable, error) {
 	if gc == nil {
 		return nil, fmt.Errorf("nil granule channel info")
 	}
-	if byteIndex < 0 {
-		return nil, fmt.Errorf("invalid byte index: %d", byteIndex)
+	if spectralLineIndex < 0 {
+		return nil, fmt.Errorf("invalid spectral line index: %d", spectralLineIndex)
 	}
 
-	region0End := int(gc.Region0Count) + 1
-	tableIndex := int(gc.TableSelect[0])
-	if gc.GetWindowSwitching() {
-		if byteIndex >= region0End {
-			tableIndex = int(gc.TableSelect[1])
+	sfBands, ok := SCALEFACTOR_BAND_INDICES[sampleRate] // sfb depends on sample rate
+	if !ok {
+		return nil, fmt.Errorf("unsupported sample rate for scalefactor bands: %d", sampleRate)
+	}
+
+	var tableIndex int
+	longSyntax := !gc.GetWindowSwitching() || gc.GetBlockType() != BlockTypeShort
+	if longSyntax {
+		region1StartSFB := int(gc.Region0Count) + 1
+		region2StartSFB := int(gc.Region0Count) + int(gc.Region1Count) + 2
+		if region1StartSFB >= len(sfBands.Long) {
+			region1StartSFB = len(sfBands.Long) - 1
 		}
-	} else {
-		region1End := region0End + int(gc.Region1Count) + 1
-		if byteIndex < region0End {
+		if region2StartSFB >= len(sfBands.Long) {
+			region2StartSFB = len(sfBands.Long) - 1
+		}
+		region1Start := sfBands.Long[region1StartSFB]
+		region2Start := sfBands.Long[region2StartSFB]
+		if spectralLineIndex < region1Start {
 			tableIndex = int(gc.TableSelect[0])
-		} else if byteIndex < region1End {
+		} else if spectralLineIndex < region2Start {
 			tableIndex = int(gc.TableSelect[1])
 		} else {
 			tableIndex = int(gc.TableSelect[2])
+		}
+	} else {
+		region1Start := sfBands.Short[3] * SCALEFACTOR_SHORT_WINDOW_COUNT
+		if gc.GetMixedBlockFlag() {
+			region1Start = sfBands.Long[8]
+		}
+		if spectralLineIndex < region1Start {
+			tableIndex = int(gc.TableSelect[0])
+		} else {
+			tableIndex = int(gc.TableSelect[1])
 		}
 	}
 

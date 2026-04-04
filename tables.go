@@ -74,6 +74,11 @@ type HuffmanTable struct {
 	Linbits int
 }
 
+type ScalefactorBandIndices struct {
+	Long  [23]int
+	Short [14]int
+}
+
 var huffmanTable = []uint16{
 	// 1
 	0x0201, 0x0000, 0x0201, 0x0010, 0x0201, 0x0001, 0x0011,
@@ -391,4 +396,19 @@ var baseTables = map[int]HuffmanTable{
 	31: {Data: huffmanTable[2230:2742], Linbits: 13},
 	32: {Data: huffmanTable[2742:2773], Linbits: 0},
 	33: {Data: huffmanTable[2773:2804], Linbits: 0},
+}
+
+var SCALEFACTOR_BAND_INDICES = map[uint16]ScalefactorBandIndices{
+	32000: {
+		Long:  [23]int{0, 4, 8, 12, 16, 20, 24, 30, 36, 44, 54, 66, 82, 102, 126, 156, 194, 240, 296, 364, 448, 550, 576},
+		Short: [14]int{0, 4, 8, 12, 16, 22, 30, 40, 52, 66, 84, 106, 136, 192},
+	},
+	44100: {
+		Long:  [23]int{0, 4, 8, 12, 16, 20, 24, 30, 36, 44, 52, 62, 74, 90, 110, 134, 162, 196, 238, 288, 342, 418, 576},
+		Short: [14]int{0, 4, 8, 12, 16, 22, 30, 40, 52, 66, 84, 106, 136, 192},
+	},
+	48000: {
+		Long:  [23]int{0, 4, 8, 12, 16, 20, 24, 30, 36, 42, 50, 60, 72, 88, 106, 128, 156, 190, 230, 276, 330, 384, 576},
+		Short: [14]int{0, 4, 8, 12, 16, 22, 28, 38, 50, 64, 80, 100, 126, 192},
+	},
 }

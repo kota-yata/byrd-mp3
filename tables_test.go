@@ -61,3 +61,31 @@ func TestBaseTables(t *testing.T) {
 		}
 	}
 }
+
+func TestScalefactorBandIndices(t *testing.T) {
+	for _, tc := range []struct {
+		sampleRate uint16
+		long8      int
+		long21     int
+		short3     int
+		short12    int
+	}{
+		{32000, 36, 550, 12, 136},
+		{44100, 36, 418, 12, 136},
+		{48000, 36, 384, 12, 126},
+	} {
+		bands, ok := SCALEFACTOR_BAND_INDICES[tc.sampleRate]
+		if !ok {
+			t.Fatalf("missing scalefactor band indices for %d", tc.sampleRate)
+		}
+		if bands.Long[8] != tc.long8 || bands.Long[21] != tc.long21 {
+			t.Fatalf("sampleRate %d long bands got [%d %d], want [%d %d]", tc.sampleRate, bands.Long[8], bands.Long[21], tc.long8, tc.long21)
+		}
+		if bands.Short[3] != tc.short3 || bands.Short[12] != tc.short12 {
+			t.Fatalf("sampleRate %d short bands got [%d %d], want [%d %d]", tc.sampleRate, bands.Short[3], bands.Short[12], tc.short3, tc.short12)
+		}
+		if bands.Long[22] != 576 || bands.Short[13] != 192 {
+			t.Fatalf("sampleRate %d terminal bands got long=%d short=%d, want long=576 short=192", tc.sampleRate, bands.Long[22], bands.Short[13])
+		}
+	}
+}

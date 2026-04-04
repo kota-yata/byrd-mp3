@@ -271,21 +271,21 @@ func TestSelectTable_LongBlock(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		byteIndex int
+		lineIndex int
 		wantTable int
 	}{
 		{0, 5},
-		{2, 5},
-		{3, 7},
-		{6, 7},
-		{7, 9},
+		{11, 5},
+		{12, 7},
+		{29, 7},
+		{30, 9},
 	} {
-		got, err := selectTable(gc, tc.byteIndex)
+		got, err := selectTable(44100, gc, tc.lineIndex)
 		if err != nil {
-			t.Fatalf("selectTable(%d) failed: %v", tc.byteIndex, err)
+			t.Fatalf("selectTable(%d) failed: %v", tc.lineIndex, err)
 		}
 		if got.Linbits != baseTables[tc.wantTable].Linbits || len(got.Data) != len(baseTables[tc.wantTable].Data) {
-			t.Fatalf("selectTable(%d) got table %+v, want table %d", tc.byteIndex, *got, tc.wantTable)
+			t.Fatalf("selectTable(%d) got table %+v, want table %d", tc.lineIndex, *got, tc.wantTable)
 		}
 	}
 }
@@ -299,7 +299,7 @@ func TestSelectTable_SwitchedWindow(t *testing.T) {
 	gc.SetWindowSwitching(true)
 	gc.SetBlockType(BlockTypeShort)
 
-	got0, err := selectTable(gc, 0)
+	got0, err := selectTable(44100, gc, 0)
 	if err != nil {
 		t.Fatalf("selectTable region0 failed: %v", err)
 	}
@@ -307,7 +307,7 @@ func TestSelectTable_SwitchedWindow(t *testing.T) {
 		t.Fatalf("region0 got %+v, want table 16", *got0)
 	}
 
-	got1, err := selectTable(gc, int(gc.Region0Count)+1)
+	got1, err := selectTable(44100, gc, 36)
 	if err != nil {
 		t.Fatalf("selectTable region1 failed: %v", err)
 	}
@@ -317,15 +317,18 @@ func TestSelectTable_SwitchedWindow(t *testing.T) {
 }
 
 func TestSelectTable_Invalid(t *testing.T) {
-	if _, err := selectTable(nil, 0); err == nil {
+	if _, err := selectTable(44100, nil, 0); err == nil {
 		t.Fatalf("expected nil granule channel error")
 	}
 
 	gc := &GranuleChannelInfo{TableSelect: [3]byte{4, 7, 9}}
-	if _, err := selectTable(gc, -1); err == nil {
+	if _, err := selectTable(44100, gc, -1); err == nil {
 		t.Fatalf("expected negative index error")
 	}
-	if _, err := selectTable(gc, 0); err == nil {
+	if _, err := selectTable(12345, gc, 0); err == nil {
+		t.Fatalf("expected unsupported sample rate error")
+	}
+	if _, err := selectTable(44100, gc, 0); err == nil {
 		t.Fatalf("expected unsupported table error")
 	}
 }
