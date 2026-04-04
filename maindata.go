@@ -170,3 +170,42 @@ func ParseScaleFactor(br *BitReader, gc *GranuleChannelInfo, scfsi [4]byte, gran
 
 	return br.pos - start, nil
 }
+
+func selectTable(gc *GranuleChannelInfo, byteIndex int) (*HuffmanTable, error) {
+	if gc == nil {
+		return nil, fmt.Errorf("nil granule channel info")
+	}
+	if byteIndex < 0 {
+		return nil, fmt.Errorf("invalid byte index: %d", byteIndex)
+	}
+
+	region0End := int(gc.Region0Count) + 1
+	tableIndex := int(gc.TableSelect[0])
+	if gc.GetWindowSwitching() {
+		if byteIndex >= region0End {
+			tableIndex = int(gc.TableSelect[1])
+		}
+	} else {
+		region1End := region0End + int(gc.Region1Count) + 1
+		if byteIndex < region0End {
+			tableIndex = int(gc.TableSelect[0])
+		} else if byteIndex < region1End {
+			tableIndex = int(gc.TableSelect[1])
+		} else {
+			tableIndex = int(gc.TableSelect[2])
+		}
+	}
+
+	table, ok := baseTables[tableIndex]
+	if !ok {
+		return nil, fmt.Errorf("unknown huffman table: %d", tableIndex)
+	}
+	if table.Data == nil {
+		return nil, fmt.Errorf("unsupported huffman table: %d", tableIndex)
+	}
+	return &table, nil
+}
+
+func ParseBigValues(br *BitReader, gc *GranuleChannelInfo, mainData []byte, scalefactors *Scalefactors) ([]byte, error) {
+	return nil, fmt.Errorf("ParseBigValues not implemented")
+}

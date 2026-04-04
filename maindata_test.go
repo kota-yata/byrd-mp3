@@ -262,3 +262,70 @@ func TestParseScaleFactor_Part23TooShort(t *testing.T) {
 		t.Fatalf("expected part23 length error, got nil")
 	}
 }
+
+func TestSelectTable_LongBlock(t *testing.T) {
+	gc := &GranuleChannelInfo{
+		TableSelect:  [3]byte{5, 7, 9},
+		Region0Count: 2,
+		Region1Count: 3,
+	}
+
+	for _, tc := range []struct {
+		byteIndex int
+		wantTable int
+	}{
+		{0, 5},
+		{2, 5},
+		{3, 7},
+		{6, 7},
+		{7, 9},
+	} {
+		got, err := selectTable(gc, tc.byteIndex)
+		if err != nil {
+			t.Fatalf("selectTable(%d) failed: %v", tc.byteIndex, err)
+		}
+		if got.Linbits != baseTables[tc.wantTable].Linbits || len(got.Data) != len(baseTables[tc.wantTable].Data) {
+			t.Fatalf("selectTable(%d) got table %+v, want table %d", tc.byteIndex, *got, tc.wantTable)
+		}
+	}
+}
+
+func TestSelectTable_SwitchedWindow(t *testing.T) {
+	gc := &GranuleChannelInfo{
+		TableSelect:  [3]byte{16, 24, 0},
+		Region0Count: PURE_SHORT_REGION0_COUNT,
+		Region1Count: PURE_SHORT_REGION1_COUNT,
+	}
+	gc.SetWindowSwitching(true)
+	gc.SetBlockType(BlockTypeShort)
+
+	got0, err := selectTable(gc, 0)
+	if err != nil {
+		t.Fatalf("selectTable region0 failed: %v", err)
+	}
+	if got0.Linbits != 1 || len(got0.Data) != len(baseTables[16].Data) {
+		t.Fatalf("region0 got %+v, want table 16", *got0)
+	}
+
+	got1, err := selectTable(gc, int(gc.Region0Count)+1)
+	if err != nil {
+		t.Fatalf("selectTable region1 failed: %v", err)
+	}
+	if got1.Linbits != 4 || len(got1.Data) != len(baseTables[24].Data) {
+		t.Fatalf("region1 got %+v, want table 24", *got1)
+	}
+}
+
+func TestSelectTable_Invalid(t *testing.T) {
+	if _, err := selectTable(nil, 0); err == nil {
+		t.Fatalf("expected nil granule channel error")
+	}
+
+	gc := &GranuleChannelInfo{TableSelect: [3]byte{4, 7, 9}}
+	if _, err := selectTable(gc, -1); err == nil {
+		t.Fatalf("expected negative index error")
+	}
+	if _, err := selectTable(gc, 0); err == nil {
+		t.Fatalf("expected unsupported table error")
+	}
+}
