@@ -5,6 +5,7 @@ import (
 	"byrd/internal/common"
 	"byrd/internal/header"
 	"byrd/internal/maindata"
+	"byrd/internal/stereo"
 	"fmt"
 	"io"
 	"os"
@@ -154,6 +155,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 		var spectralValues [2][576]int
 		var requantizedValues [2][576]float64
 		var reorderedValues [2][576]float64
+		var stereoValues [2][576]float64
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
@@ -238,6 +240,26 @@ func runParseRealDataTest(t *testing.T, path string) {
 				if br.Pos > len(mainData)*8 {
 					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: part23 overruns main data bitstream", fileLabel, frameIndex, gr, ch)
+				}
+			}
+			for ch := 0; ch < channels; ch++ {
+				copy(stereoValues[ch][:], reorderedValues[ch][:])
+			}
+			if channels == 2 {
+				left := stereoValues[0][:]
+				right := stereoValues[1][:]
+				if err := stereo.ApplyJointStereo(h.GetChannelMode(), h.GetModeExtension(), left, right); err != nil {
+					logFrameSummary()
+					t.Fatalf("file=%s frame=%d gr=%d: failed to apply joint stereo: %v", fileLabel, frameIndex, gr, err)
+				}
+				for ch := 0; ch < channels; ch++ {
+					nonZeroStereo := 0
+					for _, v := range stereoValues[ch] {
+						if v != 0 {
+							nonZeroStereo++
+						}
+					}
+					frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d stereoNonZero=%d", gr, ch, nonZeroStereo))
 				}
 			}
 		}

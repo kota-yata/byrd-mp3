@@ -5,6 +5,7 @@ import (
 	"byrd/internal/common"
 	"byrd/internal/header"
 	"byrd/internal/maindata"
+	"byrd/internal/stereo"
 	"fmt"
 	"io"
 	"os"
@@ -124,6 +125,14 @@ func DecodeMP3Frames(r *bufio.Reader) {
 				br.Pos = part23End
 				if br.Pos > len(mainData)*8 {
 					fmt.Printf("main data overrun: frame granule=%d channel=%d part23=%d\n", gr, ch, gc.Part23Length)
+					return
+				}
+			}
+			if channels == 2 {
+				left := reorderedValues[gr][0][:]
+				right := reorderedValues[gr][1][:]
+				if err := stereo.ApplyJointStereo(h.GetChannelMode(), h.GetModeExtension(), left, right); err != nil {
+					fmt.Printf("failed to apply joint stereo: frame granule=%d err=%v\n", gr, err)
 					return
 				}
 			}
