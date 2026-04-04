@@ -1,10 +1,10 @@
 package decoder
 
 import (
+	"bufio"
 	"byrd/internal/common"
 	"byrd/internal/header"
 	"byrd/internal/maindata"
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -28,6 +28,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var scalefactors [2][2]maindata.Scalefactors
 	var spectralValues [2][2][576]int
 	var requantizedValues [2][2][576]float64
+	var reorderedValues [2][2][576]float64
 	for {
 		h = header.MP3FrameHeader{} // reset frame state
 		if err := header.ReadHeader(&h, r); err != nil {
@@ -113,6 +114,11 @@ func DecodeMP3Frames(r *bufio.Reader) {
 				requantizedBuffer := requantizedValues[gr][ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors[gr][ch], spectralBuffer, &requantizedBuffer); err != nil {
 					fmt.Printf("failed to requantize values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
+				reorderedBuffer := reorderedValues[gr][ch][:]
+				if err := maindata.Reorder(h.GetSampleRate(), gc, requantizedBuffer, &reorderedBuffer); err != nil {
+					fmt.Printf("failed to reorder values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
 				br.Pos = part23End
