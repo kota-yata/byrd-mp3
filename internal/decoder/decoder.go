@@ -23,7 +23,7 @@ func OpenMP3File(path string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-func DecodeMP3Frames(r *bufio.Reader) {
+func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 	var h header.MP3FrameHeader
 	var mainDataReservoir []byte
 	var cur []byte
@@ -37,29 +37,31 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var hybridSamples [2][2][32][18]float64
 	var synthesisState [2]synthesis.PolyphaseState
 	var pcmSamples [2][2][576]float64
+	var out []int16
+	var sampleRate uint16
+	channels := 0
 	for {
 		h = header.MP3FrameHeader{} // reset frame state
 		if err := header.ReadHeader(&h, r); err != nil {
-			fmt.Printf("failed to read MP3 frame header: %v\n", err)
-			return
+			if err == io.EOF {
+				break
+			}
+			return nil, 0, 0, fmt.Errorf("failed to read MP3 frame header: %w", err)
 		}
 
 		if !h.ValidateCRC(r) {
-			fmt.Printf("CRC check failed for MP3 frame\n")
-			return
+			return nil, 0, 0, fmt.Errorf("CRC check failed for MP3 frame")
 		}
 
 		sideInfoLen := header.GetSideInfoLength(&h)
 		sideInfo, err := header.ReadSideInfo(&h, r, sideInfoLen)
 		if err != nil {
-			fmt.Printf("failed to read side info: %v\n", err)
-			return
+			return nil, 0, 0, fmt.Errorf("failed to read side info: %w", err)
 		}
 
 		frameLen, err := h.GetFrameLength()
 		if err != nil {
-			fmt.Printf("failed to calculate frame length: %v\n", err)
-			return
+			return nil, 0, 0, fmt.Errorf("failed to calculate frame length: %w", err)
 		}
 		crcLen := 0
 		if h.HasCRC() {
@@ -74,21 +76,25 @@ func DecodeMP3Frames(r *bufio.Reader) {
 		cur = cur[:mainDataLen]
 		_, err = io.ReadFull(r, cur)
 		if err != nil {
-			fmt.Printf("failed to read main data: %v\n", err)
-			return
+			return nil, 0, 0, fmt.Errorf("failed to read main data: %w", err)
 		}
 		err = maindata.ReadMainData(sideInfo.MainDataBegin, &mainDataReservoir, cur, &mainData)
 		if err != nil {
-			fmt.Printf("failed to read main data: %v\n", err)
-			return
+			return nil, 0, 0, fmt.Errorf("failed to read main data: %w", err)
 		}
 		br := common.NewBitReader(mainData)
-		channels := 2
+		frameChannels := 2
 		if h.GetChannelMode() == header.ChannelModeMono {
-			channels = 1
+			frameChannels = 1
+		}
+		if sampleRate == 0 {
+			sampleRate = h.GetSampleRate()
+			channels = frameChannels
+		} else if sampleRate != h.GetSampleRate() || channels != frameChannels {
+			return nil, 0, 0, fmt.Errorf("variable stream parameters are not supported: sampleRate=%d/%d channels=%d/%d", sampleRate, h.GetSampleRate(), channels, frameChannels)
 		}
 		for gr := range GRANULE_COUNT {
-			for ch := 0; ch < channels; ch++ {
+			for ch := 0; ch < frameChannels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
 				part23Start := br.Pos
 				part23End := part23Start + int(gc.Part23Length)
@@ -99,76 +105,70 @@ func DecodeMP3Frames(r *bufio.Reader) {
 				}
 				_, err = maindata.ParseScaleFactor(br, gc, sideInfo.SCFSI[ch], gr, prev, &scalefactors[gr][ch])
 				if err != nil {
-					fmt.Printf("failed to parse scalefactors: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to parse scalefactors: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 
 				huffmanLen := part23End - br.Pos
 				if huffmanLen < 0 {
-					fmt.Printf("main data underrun: frame granule=%d channel=%d part23=%d bits consumed for scalefactors=%d\n", gr, ch, gc.Part23Length, br.Pos-part23Start)
-					return
+					return nil, 0, 0, fmt.Errorf("main data underrun: frame granule=%d channel=%d part23=%d bits consumed for scalefactors=%d", gr, ch, gc.Part23Length, br.Pos-part23Start)
 				}
 				spectralBuffer := spectralValues[gr][ch][:]
 				_, err = maindata.ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralBuffer)
 				if err != nil {
-					fmt.Printf("failed to parse big values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to parse big values: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 				_, err = maindata.ParseCount1Values(br, gc, part23End, &spectralBuffer)
 				if err != nil {
-					fmt.Printf("failed to parse count1 values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to parse count1 values: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 				requantizedBuffer := requantizedValues[gr][ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors[gr][ch], spectralBuffer, &requantizedBuffer); err != nil {
-					fmt.Printf("failed to requantize values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to requantize values: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 				reorderedBuffer := reorderedValues[gr][ch][:]
 				if err := maindata.Reorder(h.GetSampleRate(), gc, requantizedBuffer, &reorderedBuffer); err != nil {
-					fmt.Printf("failed to reorder values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to reorder values: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 				br.Pos = part23End
 				if br.Pos > len(mainData)*8 {
-					fmt.Printf("main data overrun: frame granule=%d channel=%d part23=%d\n", gr, ch, gc.Part23Length)
-					return
+					return nil, 0, 0, fmt.Errorf("main data overrun: frame granule=%d channel=%d part23=%d", gr, ch, gc.Part23Length)
 				}
 			}
-			if channels == 2 {
+			if frameChannels == 2 {
 				left := reorderedValues[gr][0][:]
 				right := reorderedValues[gr][1][:]
 				if err := stereo.ApplyJointStereo(h.GetChannelMode(), h.GetModeExtension(), left, right); err != nil {
-					fmt.Printf("failed to apply joint stereo: frame granule=%d err=%v\n", gr, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to apply joint stereo: frame granule=%d err=%w", gr, err)
 				}
 			}
-			for ch := 0; ch < channels; ch++ {
+			for ch := 0; ch < frameChannels; ch++ {
 				hybridBuffer := hybridValues[gr][ch][:]
 				copy(hybridBuffer, reorderedValues[gr][ch][:])
 				if err := hybrid.ApplyAliasReduction(&sideInfo.Granule[gr][ch], hybridBuffer); err != nil {
-					fmt.Printf("failed to apply alias reduction: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to apply alias reduction: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 				if err := hybrid.HybridSynthesis(&sideInfo.Granule[gr][ch], hybridBuffer, &overlapState[ch], &hybridSamples[gr][ch]); err != nil {
-					fmt.Printf("failed to run hybrid synthesis: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to run hybrid synthesis: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
 				synthesis.ApplyFrequencyInversion(&hybridSamples[gr][ch])
 				if err := synthesis.SynthesizeGranule(&hybridSamples[gr][ch], &synthesisState[ch], &pcmSamples[gr][ch]); err != nil {
-					fmt.Printf("failed to run polyphase synthesis: frame granule=%d channel=%d err=%v\n", gr, ch, err)
-					return
+					return nil, 0, 0, fmt.Errorf("failed to run polyphase synthesis: frame granule=%d channel=%d err=%w", gr, ch, err)
+				}
+			}
+			if frameChannels == 1 {
+				for i := 0; i < 576; i++ {
+					out = append(out, synthesis.QuantizeSample(pcmSamples[gr][0][i]))
+				}
+			} else {
+				for i := 0; i < 576; i++ {
+					out = append(out,
+						synthesis.QuantizeSample(pcmSamples[gr][0][i]),
+						synthesis.QuantizeSample(pcmSamples[gr][1][i]),
+					)
 				}
 			}
 		}
-
-		// check stream end
-		if _, err := r.Peek(1); err != nil {
-			if err == io.EOF {
-				break
-			}
-			fmt.Printf("failed to check next frame: %v\n", err)
-			return
-		}
 	}
+
+	return out, sampleRate, channels, nil
 }
