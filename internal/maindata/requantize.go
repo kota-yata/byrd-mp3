@@ -93,12 +93,12 @@ func signedPow43(is int) float64 {
 }
 
 func longSFBForLine(longBands [23]int, line int) int {
-	for sfb := 0; sfb < len(longBands)-1; sfb++ {
+	for sfb := 0; sfb < len(longBands)-2; sfb++ {
 		if line < longBands[sfb+1] {
 			return sfb
 		}
 	}
-	return len(longBands) - 2
+	return len(longBands) - 3
 }
 
 func shortSFBWindowForLine(shortBands [14]int, line int, mixed bool) (int, int, error) {
@@ -112,7 +112,7 @@ func shortSFBWindowForLine(shortBands [14]int, line int, mixed bool) (int, int, 
 		startSFB = mixedShortStartSFB
 	}
 
-	for sfb := startSFB; sfb < len(shortBands)-1; sfb++ {
+	for sfb := startSFB; sfb < len(shortBands)-2; sfb++ {
 		bandStart := shortBands[sfb] * SCALEFACTOR_SHORT_WINDOW_COUNT
 		bandEnd := shortBands[sfb+1] * SCALEFACTOR_SHORT_WINDOW_COUNT
 		if shortLine >= bandStart && shortLine < bandEnd {
@@ -126,6 +126,24 @@ func shortSFBWindowForLine(shortBands [14]int, line int, mixed bool) (int, int, 
 			}
 			return sfb, window, nil
 		}
+	}
+
+	// The current scalefactor parser stores 12 short scalefactor bands. Until the
+	// high-band handling is expanded, treat the remaining tail as part of the
+	// last transmitted short scalefactor band.
+	lastSFB := len(shortBands) - 3
+	bandStart := shortBands[lastSFB] * SCALEFACTOR_SHORT_WINDOW_COUNT
+	bandEnd := shortBands[len(shortBands)-1] * SCALEFACTOR_SHORT_WINDOW_COUNT
+	if shortLine >= bandStart && shortLine < bandEnd {
+		width := shortBands[len(shortBands)-1] - shortBands[lastSFB]
+		if width <= 0 {
+			return 0, 0, fmt.Errorf("invalid terminal short scalefactor band width")
+		}
+		window := (shortLine - bandStart) / width
+		if window < 0 || window >= SCALEFACTOR_SHORT_WINDOW_COUNT {
+			return 0, 0, fmt.Errorf("invalid terminal short window index for line %d", line)
+		}
+		return lastSFB, window, nil
 	}
 
 	return 0, 0, fmt.Errorf("line %d does not map to a short scalefactor band", line)

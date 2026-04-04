@@ -110,6 +110,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 		br := common.NewBitReader(mainData)
 		var prev [2]maindata.Scalefactors
 		var spectralValues [2][576]int
+		var requantizedValues [2][576]float64
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
@@ -136,8 +137,21 @@ func TestParseOutputMP3RealData(t *testing.T) {
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse count1 values: %v", frameIndex, gr, ch, err)
 				}
+				if err := maindata.FillRZeroValues(&spectralBuffer); err != nil {
+					t.Fatalf("frame %d gr=%d ch=%d: failed to fill rzero values: %v", frameIndex, gr, ch, err)
+				}
+				requantizedBuffer := requantizedValues[ch][:]
+				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors, spectralBuffer, &requantizedBuffer); err != nil {
+					t.Fatalf("frame %d gr=%d ch=%d: failed to requantize values: %v", frameIndex, gr, ch, err)
+				}
+				nonZeroRequantized := 0
+				for _, v := range requantizedBuffer {
+					if v != 0 {
+						nonZeroRequantized++
+					}
+				}
 				frameSummary = append(frameSummary, fmt.Sprintf(
-					"gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectralLines=%d",
+					"gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectralLines=%d requantizedNonZero=%d",
 					gr,
 					ch,
 					gc.Part23Length,
@@ -161,6 +175,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					scalefactors.Long,
 					scalefactors.Short,
 					576,
+					nonZeroRequantized,
 				))
 
 				br.Pos = part23End
