@@ -69,6 +69,11 @@ var (
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+type HuffmanTable struct {
+	Data    []uint16
+	Linbits int
+}
+
 var huffmanTable = []uint16{
 	// 1
 	0x0201, 0x0000, 0x0201, 0x0010, 0x0201, 0x0001, 0x0011,
@@ -349,4 +354,41 @@ var huffmanTable = []uint16{
 	0x1001, 0x0801, 0x0401, 0x0201, 0x0000, 0x0001, 0x0201, 0x0002, 0x0003, 0x0401, 0x0201,
 	0x0004, 0x0005, 0x0201, 0x0006, 0x0007, 0x0801, 0x0401, 0x0201, 0x0008, 0x0009, 0x0201,
 	0x000a, 0x000b, 0x0401, 0x0201, 0x000c, 0x000d, 0x0201, 0x000e, 0x000f,
+}
+
+// actual tables used for decoding
+var baseTables = map[int]HuffmanTable{
+	1:  {Data: huffmanTable[0:7], Linbits: 0},
+	2:  {Data: huffmanTable[7:24], Linbits: 0},
+	3:  {Data: huffmanTable[24:41], Linbits: 0},
+	4:  {Data: nil, Linbits: 0},
+	5:  {Data: huffmanTable[41:72], Linbits: 0},
+	6:  {Data: huffmanTable[72:103], Linbits: 0},
+	7:  {Data: huffmanTable[103:174], Linbits: 0},
+	8:  {Data: huffmanTable[174:245], Linbits: 0},
+	9:  {Data: huffmanTable[245:316], Linbits: 0},
+	10: {Data: huffmanTable[316:443], Linbits: 0},
+	11: {Data: huffmanTable[443:570], Linbits: 0},
+	12: {Data: huffmanTable[570:697], Linbits: 0},
+	13: {Data: huffmanTable[697:1208], Linbits: 0},
+	14: {Data: nil, Linbits: 0},
+	15: {Data: huffmanTable[1208:1719], Linbits: 0},
+	16: {Data: huffmanTable[1719:2230], Linbits: 1},
+	17: {Data: huffmanTable[1719:2230], Linbits: 2},
+	18: {Data: huffmanTable[1719:2230], Linbits: 3},
+	19: {Data: huffmanTable[1719:2230], Linbits: 4},
+	20: {Data: huffmanTable[1719:2230], Linbits: 6},
+	21: {Data: huffmanTable[1719:2230], Linbits: 8},
+	22: {Data: huffmanTable[1719:2230], Linbits: 10},
+	23: {Data: huffmanTable[1719:2230], Linbits: 13},
+	24: {Data: huffmanTable[2230:2742], Linbits: 4},
+	25: {Data: huffmanTable[2230:2742], Linbits: 5},
+	26: {Data: huffmanTable[2230:2742], Linbits: 6},
+	27: {Data: huffmanTable[2230:2742], Linbits: 7},
+	28: {Data: huffmanTable[2230:2742], Linbits: 8},
+	29: {Data: huffmanTable[2230:2742], Linbits: 9},
+	30: {Data: huffmanTable[2230:2742], Linbits: 11},
+	31: {Data: huffmanTable[2230:2742], Linbits: 13},
+	32: {Data: huffmanTable[2742:2773], Linbits: 0},
+	33: {Data: huffmanTable[2773:2804], Linbits: 0},
 }
