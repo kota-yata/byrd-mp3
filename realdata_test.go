@@ -2,7 +2,9 @@ package byrd
 
 import (
 	"bufio"
+	"fmt"
 	"io"
+	"strings"
 	"testing"
 )
 
@@ -74,31 +76,31 @@ func TestParseOutputMP3RealData(t *testing.T) {
 			t.Fatalf("frame %d: failed to reconstruct main data: %v", frameIndex, err)
 		}
 
-		t.Logf(
-			"frame=%d bitrate=%dkbps sampleRate=%d padding=%v hasCRC=%v channelMode=%s modeExt=%d copyright=%v original=%v emphasis=%d frameLen=%d sideInfoLen=%d mainDataBegin=%d mainDataLen=%d reservoirLen=%d",
-			frameIndex,
-			bitrateKbps,
-			h.GetSampleRate(),
-			h.Padding(),
-			h.HasCRC(),
-			h.GetChannelMode(),
-			h.GetModeExtension(),
-			h.IsCopyrighted(),
-			h.IsOriginal(),
-			h.GetEmphasis(),
-			frameLen,
-			sideInfoLen,
-			sideInfo.MainDataBegin,
-			mainDataLen,
-			len(mainDataReservoir),
-		)
-
 		channels := 2
 		if h.GetChannelMode() == ChannelModeMono {
 			channels = 1
 		}
+		frameSummary := []string{
+			fmt.Sprintf(
+				"bitrate=%dkbps sampleRate=%d padding=%v hasCRC=%v channelMode=%s modeExt=%d copyright=%v original=%v emphasis=%d frameLen=%d sideInfoLen=%d mainDataBegin=%d mainDataLen=%d reservoirLen=%d",
+				bitrateKbps,
+				h.GetSampleRate(),
+				h.Padding(),
+				h.HasCRC(),
+				h.GetChannelMode(),
+				h.GetModeExtension(),
+				h.IsCopyrighted(),
+				h.IsOriginal(),
+				h.GetEmphasis(),
+				frameLen,
+				sideInfoLen,
+				sideInfo.MainDataBegin,
+				mainDataLen,
+				len(mainDataReservoir),
+			),
+		}
 		for ch := 0; ch < channels; ch++ {
-			t.Logf("frame=%d ch=%d scfsi=%v", frameIndex, ch, sideInfo.SCFSI[ch])
+			frameSummary = append(frameSummary, fmt.Sprintf("ch=%d scfsi=%v", ch, sideInfo.SCFSI[ch]))
 		}
 
 		br := NewBitReader(mainData)
@@ -133,9 +135,8 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to fill rzero values: %v", frameIndex, gr, ch, err)
 				}
 
-				t.Logf(
-					"frame=%d gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectral=%v",
-					frameIndex,
+				frameSummary = append(frameSummary, fmt.Sprintf(
+					"gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectralLines=%d",
 					gr,
 					ch,
 					gc.Part23Length,
@@ -158,8 +159,8 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					gc.GetCount1TableSelect(),
 					scalefactors.Long,
 					scalefactors.Short,
-					spectralValues[ch],
-				)
+					len(spectralValues[ch]),
+				))
 
 				br.pos = part23End
 				if br.pos > len(mainData)*8 {
@@ -168,6 +169,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 			}
 		}
 
+		t.Logf("frame=%d %s", frameIndex, strings.Join(frameSummary, " | "))
 		frameIndex++
 	}
 
