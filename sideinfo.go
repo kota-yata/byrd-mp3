@@ -14,9 +14,9 @@ type SideInfo struct {
 
 type GranuleChannelInfo struct {
 	Part23Length     uint16 // total bit length of scalefactors and huffman-coded spectral information
-	BigValues        uint16
-	GlobalGain       byte // used for dequantization
-	ScalefacCompress byte // bit length of each scalefactor value
+	BigValues        uint16 // number of pairs of spectral values coded in big value region
+	GlobalGain       byte   // used for dequantization
+	ScalefacCompress byte   // bit length of each scalefactor value
 
 	TableSelect  [3]byte
 	SubblockGain [3]byte
