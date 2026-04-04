@@ -32,6 +32,8 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var requantizedValues [2][2][576]float64
 	var reorderedValues [2][2][576]float64
 	var hybridValues [2][2][576]float64
+	var overlapState [2][32][18]float64
+	var hybridSamples [2][2][32][18]float64
 	for {
 		h = header.MP3FrameHeader{} // reset frame state
 		if err := header.ReadHeader(&h, r); err != nil {
@@ -143,6 +145,10 @@ func DecodeMP3Frames(r *bufio.Reader) {
 				copy(hybridBuffer, reorderedValues[gr][ch][:])
 				if err := hybrid.ApplyAliasReduction(&sideInfo.Granule[gr][ch], hybridBuffer); err != nil {
 					fmt.Printf("failed to apply alias reduction: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
+				if err := hybrid.HybridSynthesis(&sideInfo.Granule[gr][ch], hybridBuffer, &overlapState[ch], &hybridSamples[gr][ch]); err != nil {
+					fmt.Printf("failed to run hybrid synthesis: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
 			}

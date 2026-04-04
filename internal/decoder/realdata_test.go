@@ -158,6 +158,8 @@ func runParseRealDataTest(t *testing.T, path string) {
 		var reorderedValues [2][576]float64
 		var stereoValues [2][576]float64
 		var hybridValues [2][576]float64
+		var overlapState [2][32][18]float64
+		var hybridSamples [2][32][18]float64
 		for gr := 0; gr < 2; gr++ {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
@@ -276,7 +278,19 @@ func runParseRealDataTest(t *testing.T, path string) {
 						nonZeroHybrid++
 					}
 				}
-				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d", gr, ch, nonZeroHybrid))
+				if err := hybrid.HybridSynthesis(&sideInfo.Granule[gr][ch], hybridValues[ch][:], &overlapState[ch], &hybridSamples[ch]); err != nil {
+					logFrameSummary()
+					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to run hybrid synthesis: %v", fileLabel, frameIndex, gr, ch, err)
+				}
+				nonZeroSamples := 0
+				for sb := range hybridSamples[ch] {
+					for i := range hybridSamples[ch][sb] {
+						if hybridSamples[ch][sb][i] != 0 {
+							nonZeroSamples++
+						}
+					}
+				}
+				frameSummary = append(frameSummary, fmt.Sprintf("gr=%d ch=%d aliasNonZero=%d hybridNonZero=%d", gr, ch, nonZeroHybrid, nonZeroSamples))
 			}
 		}
 		frameIndex++
