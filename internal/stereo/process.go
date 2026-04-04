@@ -3,11 +3,14 @@ package stereo
 import (
 	"byrd/internal/header"
 	"fmt"
-	"math"
 )
 
 const MS_STEREO_SCALE = 0.7071067811865476 // 1 / sqrt(2)
 
+// MS Stereo records the mid (M) and side (S) signals instead of left and right.
+// To reconstruct the left and right channels, we can use the following formulas:
+// Left = (M + S) / sqrt(2)
+// Right = (M - S) / sqrt(2)
 func ApplyMSStereo(left []float64, right []float64) error {
 	if len(left) != 576 || len(right) != 576 {
 		return fmt.Errorf("ms stereo requires 576 spectral lines: left=%d right=%d", len(left), len(right))
@@ -36,9 +39,4 @@ func ApplyJointStereo(channelMode header.ChannelMode, modeExt header.ModeExtensi
 
 	// TODO: implement intensity stereo when modeExt is IntensityStereo or IntensityAndMS.
 	return nil
-}
-
-func almostEqual(a, b float64) bool {
-	const epsilon = 1e-12
-	return math.Abs(a-b) <= epsilon
 }

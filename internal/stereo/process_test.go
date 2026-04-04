@@ -2,6 +2,7 @@ package stereo
 
 import (
 	"byrd/internal/header"
+	"math"
 	"testing"
 )
 
@@ -65,4 +66,9 @@ func TestApplyMSStereo_InvalidLength(t *testing.T) {
 	if err := ApplyMSStereo(make([]float64, 10), make([]float64, 576)); err == nil {
 		t.Fatalf("expected invalid length error")
 	}
+}
+
+func almostEqual(a, b float64) bool {
+	const epsilon = 1e-12
+	return math.Abs(a-b) <= epsilon
 }
