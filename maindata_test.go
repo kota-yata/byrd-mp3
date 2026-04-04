@@ -409,3 +409,51 @@ func TestParseBigValues_RespectsPart23End(t *testing.T) {
 		t.Fatalf("expected part23 limit error, got nil")
 	}
 }
+
+func TestParseCount1Values_Table33(t *testing.T) {
+	var bw bitWriter
+	// table 33 is a balanced 4-bit code; 1010 decodes leaf 0b0101 with this tree.
+	bw.write(4, 0b1010)
+	bw.write(1, 1) // w sign
+	bw.write(1, 0) // y sign
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{}
+	gc.SetCount1TableSelect(true)
+	got := []int{9, 8}
+
+	lines, err := ParseCount1Values(br, gc, 6, &got)
+	if err != nil {
+		t.Fatalf("ParseCount1Values failed: %v", err)
+	}
+	if lines != 4 {
+		t.Fatalf("decoded line count = %d, want 4", lines)
+	}
+	want := []int{9, 8, 0, -1, 0, 1}
+	if len(got) != len(want) {
+		t.Fatalf("decoded count1 values length = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("decoded count1 values got %v, want %v", got, want)
+		}
+	}
+}
+
+func TestParseCount1Values_RespectsPart23End(t *testing.T) {
+	var bw bitWriter
+	bw.write(4, 0b1111)
+
+	br := NewBitReader(bw.bytes())
+	gc := &GranuleChannelInfo{}
+	gc.SetCount1TableSelect(true)
+	var got []int
+
+	lines, err := ParseCount1Values(br, gc, 3, &got)
+	if err != nil {
+		t.Fatalf("ParseCount1Values failed: %v", err)
+	}
+	if lines != 0 {
+		t.Fatalf("decoded line count = %d, want 0", lines)
+	}
+}

@@ -100,8 +100,12 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					fmt.Printf("failed to parse big values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
 					return
 				}
+				_, err = ParseCount1Values(br, gc, part23End, &spectralValues[gr][ch])
+				if err != nil {
+					fmt.Printf("failed to parse count1 values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
 
-				// TODO: Implement huffman part parser. Skip the remaining part3 bits here until Huffman decoding is implemented.
 				br.pos = part23End
 				if br.pos > len(mainData)*8 {
 					fmt.Printf("main data overrun: frame granule=%d channel=%d part23=%d\n", gr, ch, gc.Part23Length)

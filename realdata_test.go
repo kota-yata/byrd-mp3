@@ -125,9 +125,13 @@ func TestParseOutputMP3RealData(t *testing.T) {
 				if err != nil {
 					t.Fatalf("frame %d gr=%d ch=%d: failed to parse big values: %v", frameIndex, gr, ch, err)
 				}
+				count1Lines, err := ParseCount1Values(br, gc, part23End, &spectralValues[ch])
+				if err != nil {
+					t.Fatalf("frame %d gr=%d ch=%d: failed to parse count1 values: %v", frameIndex, gr, ch, err)
+				}
 
 				t.Logf(
-					"frame=%d gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectral=%v",
+					"frame=%d gr=%d ch=%d part23=%d part2=%d part3=%d bigValues=%d bigValueLines=%d count1Lines=%d globalGain=%d scalefacCompress=%d tableSelect=%v subblockGain=%v region0=%d region1=%d windowSwitching=%v blockType=%s mixed=%v preflag=%v scalefacScale=%v count1Table=%v long=%v short=%v spectral=%v",
 					frameIndex,
 					gr,
 					ch,
@@ -136,6 +140,7 @@ func TestParseOutputMP3RealData(t *testing.T) {
 					int(gc.Part23Length)-part2Bits,
 					gc.BigValues,
 					bigValueLines,
+					count1Lines,
 					gc.GlobalGain,
 					gc.ScalefacCompress,
 					gc.TableSelect,
