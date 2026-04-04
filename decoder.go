@@ -23,6 +23,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 	var cur []byte
 	var mainData []byte
 	var scalefactors [2][2]Scalefactors
+	var spectralValues [2][2][]int
 	for {
 		h = MP3FrameHeader{} // reset frame state
 		if err := ReadHeader(&h, r); err != nil {
@@ -77,6 +78,7 @@ func DecodeMP3Frames(r *bufio.Reader) {
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
 				part23Start := br.pos
+				part23End := part23Start + int(gc.Part23Length)
 
 				var prev *Scalefactors
 				if gr == 1 {
@@ -88,14 +90,19 @@ func DecodeMP3Frames(r *bufio.Reader) {
 					return
 				}
 
-				huffmanLen := int(gc.Part23Length)*8 - (br.pos - part23Start) // remaining bits for huffman coded data
+				huffmanLen := part23End - br.pos
 				if huffmanLen < 0 {
 					fmt.Printf("main data underrun: frame granule=%d channel=%d part23=%d bits consumed for scalefactors=%d\n", gr, ch, gc.Part23Length, br.pos-part23Start)
 					return
 				}
+				_, err = ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralValues[gr][ch])
+				if err != nil {
+					fmt.Printf("failed to parse big values: frame granule=%d channel=%d err=%v\n", gr, ch, err)
+					return
+				}
 
 				// TODO: Implement huffman part parser. Skip the remaining part3 bits here until Huffman decoding is implemented.
-				br.pos = part23Start + int(gc.Part23Length)
+				br.pos = part23End
 				if br.pos > len(mainData)*8 {
 					fmt.Printf("main data overrun: frame granule=%d channel=%d part23=%d\n", gr, ch, gc.Part23Length)
 					return
