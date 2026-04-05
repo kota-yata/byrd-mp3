@@ -79,7 +79,7 @@ func imdctLong(in []float64, blockType common.BlockType, out *[36]float64) {
 	for n := range 36 {
 		sum := 0.0
 		for k := range 18 {
-			sum += in[k] * math.Cos(math.Pi/36*float64((2*n+19)*(2*k+1)))
+			sum += in[k] * math.Cos(math.Pi/72*float64((2*n+19)*(2*k+1)))
 		}
 		out[n] = sum * window[n]
 	}
@@ -91,9 +91,9 @@ func imdctShort(in []float64, out *[36]float64) {
 		for n := 0; n < 12; n++ {
 			sum := 0.0
 			for k := 0; k < 6; k++ {
-				sum += in[3*k+win] * math.Cos(math.Pi/12*float64((2*n+7)*(2*k+1)))
+				sum += in[3*k+win] * math.Cos(math.Pi/24*float64((2*n+7)*(2*k+1)))
 			}
-			out[6*win+n] += sum * shortWindow[n]
+			out[6*win+n+6] += sum * shortWindow[n]
 		}
 	}
 }
