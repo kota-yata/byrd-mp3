@@ -3,7 +3,17 @@ MP3 (MPEG-1 Layer 3) decoder in Go. No dependency to third-party libraries.
 
 Byrd reduces alloc count per operation by reusing memory addresses from previous frame as much as possible.
 
-Benchmark result at 2026/04/05 with go-mp3 (archived)
+### Usage
+```bash
+go get github.com/kota-yata/byrd-mp3
+```
+```go
+import byrd "github.com/kota-yata/byrd-mp3"
+```
+
+Runnable examples are under [example/README.md](/Users/kota-yata/dev/repos/mp3/example/README.md).
+
+### Benchmark result at 2026/04/05 with go-mp3 (archived)
 
 ```
 goos: darwin

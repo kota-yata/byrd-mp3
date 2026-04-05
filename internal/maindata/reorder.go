@@ -1,8 +1,8 @@
 package maindata
 
 import (
-	"byrd/internal/common"
 	"fmt"
+	"github.com/kota-yata/byrd-mp3/internal/common"
 )
 
 func Reorder(sampleRate uint16, gc *common.GranuleChannelInfo, in []float64, out *[]float64) error {

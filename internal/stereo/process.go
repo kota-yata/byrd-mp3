@@ -1,10 +1,10 @@
 package stereo
 
 import (
-	"byrd/internal/common"
-	"byrd/internal/header"
-	"byrd/internal/maindata"
 	"fmt"
+	"github.com/kota-yata/byrd-mp3/internal/common"
+	"github.com/kota-yata/byrd-mp3/internal/header"
+	"github.com/kota-yata/byrd-mp3/internal/maindata"
 )
 
 const MS_STEREO_SCALE = 0.7071067811865476 // 1 / sqrt(2)

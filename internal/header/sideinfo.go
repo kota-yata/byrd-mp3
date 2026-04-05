@@ -1,9 +1,9 @@
 package header
 
 import (
-	"byrd/internal/common"
 	"bufio"
 	"fmt"
+	"github.com/kota-yata/byrd-mp3/internal/common"
 	"io"
 )
 

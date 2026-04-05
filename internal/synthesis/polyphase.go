@@ -1,8 +1,8 @@
 package synthesis
 
 import (
-	"byrd/internal/common"
 	"fmt"
+	"github.com/kota-yata/byrd-mp3/internal/common"
 	"math"
 )
 

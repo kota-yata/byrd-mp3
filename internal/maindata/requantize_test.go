@@ -1,7 +1,7 @@
 package maindata
 
 import (
-	"byrd/internal/common"
+	"github.com/kota-yata/byrd-mp3/internal/common"
 	"math"
 	"testing"
 )

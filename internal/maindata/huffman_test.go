@@ -1,7 +1,7 @@
 package maindata
 
 import (
-	"byrd/internal/common"
+	"github.com/kota-yata/byrd-mp3/internal/common"
 	"testing"
 )
 
@@ -286,10 +286,10 @@ func TestDecodeHuffmanPair_Linbits(t *testing.T) {
 	for _, bit := range code {
 		bw.write(1, bit)
 	}
-	bw.write(1, 0b1)    // x linbit
-	bw.write(1, 0b0)    // x sign bit
-	bw.write(1, 0b0)    // y linbit
-	bw.write(1, 0b0)    // y sign bit
+	bw.write(1, 0b1) // x linbit
+	bw.write(1, 0b0) // x sign bit
+	bw.write(1, 0b0) // y linbit
+	bw.write(1, 0b0) // y sign bit
 
 	br := common.NewBitReader(bw.bytes())
 	var scratch uint32

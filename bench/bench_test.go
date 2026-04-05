@@ -1,7 +1,7 @@
 package bench
 
 import (
-	"byrd"
+	byrd "github.com/kota-yata/byrd-mp3"
 	"io"
 	"os"
 	"path/filepath"

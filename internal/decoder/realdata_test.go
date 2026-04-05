@@ -2,13 +2,13 @@ package decoder
 
 import (
 	"bufio"
-	"byrd/internal/common"
-	"byrd/internal/header"
-	"byrd/internal/hybrid"
-	"byrd/internal/maindata"
-	"byrd/internal/stereo"
-	"byrd/internal/synthesis"
 	"fmt"
+	"github.com/kota-yata/byrd-mp3/internal/common"
+	"github.com/kota-yata/byrd-mp3/internal/header"
+	"github.com/kota-yata/byrd-mp3/internal/hybrid"
+	"github.com/kota-yata/byrd-mp3/internal/maindata"
+	"github.com/kota-yata/byrd-mp3/internal/stereo"
+	"github.com/kota-yata/byrd-mp3/internal/synthesis"
 	"io"
 	"os"
 	"path/filepath"
@@ -171,8 +171,8 @@ func runParseRealDataTest(t *testing.T, path string) {
 		var synthesisState [2]synthesis.PolyphaseState
 		var pcmSamples [2][576]float64
 		for gr := 0; gr < 2; gr++ {
-		var granuleScalefactors [2]maindata.Scalefactors
-		var granuleCount1 [2]int
+			var granuleScalefactors [2]maindata.Scalefactors
+			var granuleCount1 [2]int
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
 				part23Start := br.Pos

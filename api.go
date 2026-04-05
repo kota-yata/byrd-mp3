@@ -2,8 +2,8 @@ package byrd
 
 import (
 	"bufio"
-	"byrd/internal/decoder"
 	"encoding/binary"
+	"github.com/kota-yata/byrd-mp3/internal/decoder"
 	"io"
 )
 

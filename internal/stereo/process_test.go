@@ -1,9 +1,9 @@
 package stereo
 
 import (
-	"byrd/internal/common"
-	"byrd/internal/header"
-	"byrd/internal/maindata"
+	"github.com/kota-yata/byrd-mp3/internal/common"
+	"github.com/kota-yata/byrd-mp3/internal/header"
+	"github.com/kota-yata/byrd-mp3/internal/maindata"
 	"math"
 	"testing"
 )

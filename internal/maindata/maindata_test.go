@@ -1,8 +1,8 @@
 package maindata
 
 import (
-	"byrd/internal/common"
 	"bytes"
+	"github.com/kota-yata/byrd-mp3/internal/common"
 	"testing"
 )
 
