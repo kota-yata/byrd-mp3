@@ -228,8 +228,11 @@ func ParseCount1Values(br *common.BitReader, gc *common.GranuleChannelInfo, part
 	if gc.GetCount1TableSelect() {
 		tableIndex = 33
 	}
-	table, ok := common.BaseTables[tableIndex]
-	if !ok || table.Data == nil {
+	if tableIndex < 0 || tableIndex >= len(common.BaseTables) {
+		return 0, fmt.Errorf("unsupported count1 huffman table: %d", tableIndex)
+	}
+	table := common.BaseTables[tableIndex]
+	if table.Data == nil {
 		return 0, fmt.Errorf("unsupported count1 huffman table: %d", tableIndex)
 	}
 
