@@ -22,6 +22,24 @@ func buildSynthesisMatrix() [64][32]float64 {
 	return m
 }
 
+func dotProduct32(a *[32]float64, b *[32]float64) float64 {
+	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3] +
+		a[4]*b[4] + a[5]*b[5] + a[6]*b[6] + a[7]*b[7] +
+		a[8]*b[8] + a[9]*b[9] + a[10]*b[10] + a[11]*b[11] +
+		a[12]*b[12] + a[13]*b[13] + a[14]*b[14] + a[15]*b[15] +
+		a[16]*b[16] + a[17]*b[17] + a[18]*b[18] + a[19]*b[19] +
+		a[20]*b[20] + a[21]*b[21] + a[22]*b[22] + a[23]*b[23] +
+		a[24]*b[24] + a[25]*b[25] + a[26]*b[26] + a[27]*b[27] +
+		a[28]*b[28] + a[29]*b[29] + a[30]*b[30] + a[31]*b[31]
+}
+
+func sumWindowColumn16(u *[512]float64, column int) float64 {
+	return u[column] + u[column+32] + u[column+64] + u[column+96] +
+		u[column+128] + u[column+160] + u[column+192] + u[column+224] +
+		u[column+256] + u[column+288] + u[column+320] + u[column+352] +
+		u[column+384] + u[column+416] + u[column+448] + u[column+480]
+}
+
 func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64) error {
 	if len(in) != 32 {
 		return fmt.Errorf("polyphase synthesis requires 32 subband samples: got %d", len(in))
@@ -34,12 +52,9 @@ func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64
 	}
 
 	var x [64]float64
+	inVec := (*[32]float64)(in)
 	for i := range 64 {
-		sum := 0.0
-		for k := range 32 {
-			sum += in[k] * synthesisMatrix[i][k]
-		}
-		x[i] = sum
+		x[i] = dotProduct32(&synthesisMatrix[i], inVec)
 	}
 
 	copy(state.v[64:], state.v[:960])
@@ -55,12 +70,9 @@ func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64
 		u[j] *= common.SynthDtbl[j]
 	}
 
+	uVec := &u
 	for j := range 32 {
-		sum := 0.0
-		for i := 0; i < 16; i++ {
-			sum += u[j+32*i]
-		}
-		out[j] = sum
+		out[j] = sumWindowColumn16(uVec, j)
 	}
 
 	return nil
