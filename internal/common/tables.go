@@ -496,7 +496,7 @@ var huffmanTable = []uint16{
 // original from here
 
 // actual tables used for decoding
-var BaseTables = map[int]HuffmanTable{
+var BaseTables = [34]HuffmanTable{
 	1:  {Data: huffmanTable[0:], TreeLen: 7, Linbits: 0},
 	2:  {Data: huffmanTable[7:], TreeLen: 17, Linbits: 0},
 	3:  {Data: huffmanTable[24:], TreeLen: 17, Linbits: 0},

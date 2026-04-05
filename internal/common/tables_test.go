@@ -4,7 +4,7 @@ import "testing"
 
 func TestBaseTables(t *testing.T) {
 	for i := 1; i <= 33; i++ {
-		if _, ok := BaseTables[i]; !ok {
+		if i >= len(BaseTables) {
 			t.Fatalf("baseTables missing key %d", i)
 		}
 	}
