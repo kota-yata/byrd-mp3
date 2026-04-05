@@ -10,6 +10,8 @@ var longWindow = buildLongWindow()
 var startWindow = buildStartWindow()
 var shortWindow = buildShortWindow()
 var endWindow = buildEndWindow()
+var imdctLongTable = buildIMDCTLongTable()
+var imdctShortTable = buildIMDCTShortTable()
 
 func buildLongWindow() [36]float64 {
 	var w [36]float64
@@ -55,6 +57,26 @@ func buildEndWindow() [36]float64 {
 	return w
 }
 
+func buildIMDCTLongTable() [36][18]float64 {
+	var table [36][18]float64
+	for n := range 36 {
+		for k := range 18 {
+			table[n][k] = math.Cos(math.Pi / 72 * float64((2*n+19)*(2*k+1)))
+		}
+	}
+	return table
+}
+
+func buildIMDCTShortTable() [12][6]float64 {
+	var table [12][6]float64
+	for n := range 12 {
+		for k := range 6 {
+			table[n][k] = math.Cos(math.Pi / 24 * float64((2*n+7)*(2*k+1)))
+		}
+	}
+	return table
+}
+
 func blockTypeForSubband(gc *common.GranuleChannelInfo, sb int) common.BlockType {
 	if !gc.GetWindowSwitching() {
 		return common.BlockTypeLong
@@ -79,7 +101,7 @@ func imdctLong(in []float64, blockType common.BlockType, out *[36]float64) {
 	for n := range 36 {
 		sum := 0.0
 		for k := range 18 {
-			sum += in[k] * math.Cos(math.Pi/72*float64((2*n+19)*(2*k+1)))
+			sum += in[k] * imdctLongTable[n][k]
 		}
 		out[n] = sum * window[n]
 	}
@@ -91,7 +113,7 @@ func imdctShort(in []float64, out *[36]float64) {
 		for n := 0; n < 12; n++ {
 			sum := 0.0
 			for k := 0; k < 6; k++ {
-				sum += in[3*k+win] * math.Cos(math.Pi/24*float64((2*n+7)*(2*k+1)))
+				sum += in[3*k+win] * imdctShortTable[n][k]
 			}
 			out[6*win+n+6] += sum * shortWindow[n]
 		}
