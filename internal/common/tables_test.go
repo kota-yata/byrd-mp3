@@ -9,18 +9,18 @@ func TestBaseTables(t *testing.T) {
 		}
 	}
 
-	if got := BaseTables[4]; got.Data != nil || got.Linbits != 0 {
+	if got := BaseTables[4]; got.Data != nil || got.TreeLen != 0 || got.Linbits != 0 {
 		t.Fatalf("table 4 got %+v, want nil data and linbits 0", got)
 	}
-	if got := BaseTables[14]; got.Data != nil || got.Linbits != 0 {
+	if got := BaseTables[14]; got.Data != nil || got.TreeLen != 0 || got.Linbits != 0 {
 		t.Fatalf("table 14 got %+v, want nil data and linbits 0", got)
 	}
 
-	if len(BaseTables[16].Data) != len(BaseTables[23].Data) {
-		t.Fatalf("table 16/23 data length mismatch: %d vs %d", len(BaseTables[16].Data), len(BaseTables[23].Data))
+	if BaseTables[16].TreeLen != BaseTables[23].TreeLen {
+		t.Fatalf("table 16/23 tree length mismatch: %d vs %d", BaseTables[16].TreeLen, BaseTables[23].TreeLen)
 	}
-	if len(BaseTables[24].Data) != len(BaseTables[31].Data) {
-		t.Fatalf("table 24/31 data length mismatch: %d vs %d", len(BaseTables[24].Data), len(BaseTables[31].Data))
+	if BaseTables[24].TreeLen != BaseTables[31].TreeLen {
+		t.Fatalf("table 24/31 tree length mismatch: %d vs %d", BaseTables[24].TreeLen, BaseTables[31].TreeLen)
 	}
 
 	for _, tc := range []struct {
@@ -53,8 +53,8 @@ func TestBaseTables(t *testing.T) {
 		{33, 0x1001, 31},
 	} {
 		got := BaseTables[tc.table]
-		if len(got.Data) != tc.size {
-			t.Fatalf("table %d size got %d, want %d", tc.table, len(got.Data), tc.size)
+		if got.TreeLen != tc.size {
+			t.Fatalf("table %d tree length got %d, want %d", tc.table, got.TreeLen, tc.size)
 		}
 		if len(got.Data) == 0 || got.Data[0] != tc.first {
 			t.Fatalf("table %d first value got %#x, want %#x", tc.table, got.Data[0], tc.first)
