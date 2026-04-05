@@ -1,7 +1,9 @@
 package byrd
 
 import (
+	"bytes"
 	"encoding/binary"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -104,5 +106,102 @@ func TestWriteStaticDecodedWAVFiles(t *testing.T) {
 			}
 			t.Logf("wrote %s", outPath)
 		})
+	}
+}
+
+func TestNewDecoder_ReadAndMetadata(t *testing.T) {
+	f, err := os.Open(filepath.Join("static", "440hz.mp3"))
+	if err != nil {
+		t.Fatalf("failed to open mp3: %v", err)
+	}
+	defer f.Close()
+
+	dec, err := NewDecoder(f)
+	if err != nil {
+		t.Fatalf("NewDecoder failed: %v", err)
+	}
+	if dec.SampleRate() == 0 {
+		t.Fatalf("sample rate must be non-zero")
+	}
+	if dec.Length() <= 0 {
+		t.Fatalf("length must be positive")
+	}
+
+	data, err := io.ReadAll(dec)
+	if err != nil {
+		t.Fatalf("ReadAll failed: %v", err)
+	}
+	if int64(len(data)) != dec.Length() {
+		t.Fatalf("decoded byte length got %d, want %d", len(data), dec.Length())
+	}
+	if len(data)%4 != 0 {
+		t.Fatalf("decoder output should be stereo 16-bit PCM, got %d bytes", len(data))
+	}
+}
+
+func TestNewDecoder_Seek(t *testing.T) {
+	f, err := os.Open(filepath.Join("static", "440hz.mp3"))
+	if err != nil {
+		t.Fatalf("failed to open mp3: %v", err)
+	}
+	defer f.Close()
+
+	dec, err := NewDecoder(f)
+	if err != nil {
+		t.Fatalf("NewDecoder failed: %v", err)
+	}
+
+	head := make([]byte, 32)
+	if _, err := io.ReadFull(dec, head); err != nil {
+		t.Fatalf("initial read failed: %v", err)
+	}
+	if _, err := dec.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("seek start failed: %v", err)
+	}
+	head2 := make([]byte, 32)
+	if _, err := io.ReadFull(dec, head2); err != nil {
+		t.Fatalf("second read failed: %v", err)
+	}
+	if !bytes.Equal(head, head2) {
+		t.Fatalf("read after seek start mismatch")
+	}
+
+	if _, err := dec.Seek(-8, io.SeekEnd); err != nil {
+		t.Fatalf("seek end failed: %v", err)
+	}
+	tail := make([]byte, 8)
+	n, err := io.ReadFull(dec, tail)
+	if err != nil {
+		t.Fatalf("tail read failed: %v", err)
+	}
+	if n != 8 {
+		t.Fatalf("tail read got %d bytes, want 8", n)
+	}
+}
+
+func TestNewDecoder_MatchesDecodeMP3File(t *testing.T) {
+	path := filepath.Join("static", "440hz.mp3")
+	pcm, err := DecodeMP3File(path)
+	if err != nil {
+		t.Fatalf("DecodeMP3File failed: %v", err)
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("failed to open mp3: %v", err)
+	}
+	defer f.Close()
+
+	dec, err := NewDecoder(f)
+	if err != nil {
+		t.Fatalf("NewDecoder failed: %v", err)
+	}
+	got, err := io.ReadAll(dec)
+	if err != nil {
+		t.Fatalf("ReadAll failed: %v", err)
+	}
+	want := pcmToStereoBytes(pcm)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("stream decoder bytes do not match file decode")
 	}
 }
