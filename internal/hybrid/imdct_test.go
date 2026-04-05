@@ -2,8 +2,75 @@ package hybrid
 
 import (
 	"byrd/internal/common"
+	"math"
 	"testing"
 )
+
+func referenceIMDCTLong(in []float64, blockType common.BlockType) [36]float64 {
+	var out [36]float64
+	var window *[36]float64
+	switch blockType {
+	case common.BlockTypeStart:
+		window = &startWindow
+	case common.BlockTypeEnd:
+		window = &endWindow
+	default:
+		window = &longWindow
+	}
+	for n := 0; n < 36; n++ {
+		sum := 0.0
+		for k := 0; k < 18; k++ {
+			sum += in[k] * math.Cos(math.Pi/72*float64((2*n+19)*(2*k+1)))
+		}
+		out[n] = sum * window[n]
+	}
+	return out
+}
+
+func referenceIMDCTShort(in []float64) [36]float64 {
+	var out [36]float64
+	for win := 0; win < 3; win++ {
+		for n := 0; n < 12; n++ {
+			sum := 0.0
+			for k := 0; k < 6; k++ {
+				sum += in[3*k+win] * math.Cos(math.Pi/24*float64((2*n+7)*(2*k+1)))
+			}
+			out[6*win+n+6] += sum * shortWindow[n]
+		}
+	}
+	return out
+}
+
+func assertClose36(t *testing.T, got [36]float64, want [36]float64, label string) {
+	t.Helper()
+	for i := range got {
+		if math.Abs(got[i]-want[i]) > 1e-12 {
+			t.Fatalf("%s[%d] got %.12f, want %.12f", label, i, got[i], want[i])
+		}
+	}
+}
+
+func TestIMDCTLong_MatchesReference(t *testing.T) {
+	in := make([]float64, 18)
+	for i := range in {
+		in[i] = math.Sin(float64(i)+0.25) / 7
+	}
+	var got [36]float64
+	imdctLong(in, common.BlockTypeLong, &got)
+	want := referenceIMDCTLong(in, common.BlockTypeLong)
+	assertClose36(t, got, want, "imdctLong")
+}
+
+func TestIMDCTShort_MatchesReference(t *testing.T) {
+	in := make([]float64, 18)
+	for i := range in {
+		in[i] = math.Cos(float64(i)+0.5) / 9
+	}
+	var got [36]float64
+	imdctShort(in, &got)
+	want := referenceIMDCTShort(in)
+	assertClose36(t, got, want, "imdctShort")
+}
 
 func TestHybridSynthesis_ZeroInput(t *testing.T) {
 	gc := &common.GranuleChannelInfo{}
