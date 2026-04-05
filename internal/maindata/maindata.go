@@ -206,23 +206,6 @@ func ParseBigValues(br *common.BitReader, sampleRate uint16, gc *common.GranuleC
 			return line, err
 		}
 
-		if x != 0 {
-			if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
-				return line, err
-			}
-			if scratch == 1 {
-				x = -x
-			}
-		}
-		if y != 0 {
-			if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
-				return line, err
-			}
-			if scratch == 1 {
-				y = -y
-			}
-		}
-
 		(*spectralValues)[line] = x
 		(*spectralValues)[line+1] = y
 	}
@@ -275,23 +258,7 @@ func ParseCount1Values(br *common.BitReader, gc *common.GranuleChannelInfo, part
 			}
 			return writePos - startLine, err
 		}
-
 		values := [4]int{v, w, x, y}
-		for i := range values {
-			if values[i] != 0 {
-				if err := guardedReadBit(br, part23EndBit, &scratch); err != nil {
-					br.Pos = startPos
-					if strings.HasPrefix(err.Error(), "huffman data exceeds part23 length") {
-						return writePos - startLine, nil
-					}
-					return writePos - startLine, err
-				}
-				if scratch == 1 {
-					values[i] = -values[i]
-				}
-			}
-		}
-
 		copy((*spectralValues)[writePos:], values[:])
 		writePos += len(values)
 	}
