@@ -29,6 +29,7 @@ func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 	var cur []byte
 	var mainData []byte
 	var scalefactors [2][2]maindata.Scalefactors
+	var count1 [2][2]int
 	var spectralValues [2][2][576]int
 	var requantizedValues [2][2][576]float64
 	var reorderedValues [2][2][576]float64
@@ -117,10 +118,11 @@ func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 				if err != nil {
 					return nil, 0, 0, fmt.Errorf("failed to parse big values: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
-				_, err = maindata.ParseCount1Values(br, gc, part23End, &spectralBuffer)
+				count1Lines, err := maindata.ParseCount1Values(br, gc, part23End, &spectralBuffer)
 				if err != nil {
 					return nil, 0, 0, fmt.Errorf("failed to parse count1 values: frame granule=%d channel=%d err=%w", gr, ch, err)
 				}
+				count1[gr][ch] = int(gc.BigValues)*2 + count1Lines
 				requantizedBuffer := requantizedValues[gr][ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors[gr][ch], spectralBuffer, &requantizedBuffer); err != nil {
 					return nil, 0, 0, fmt.Errorf("failed to requantize values: frame granule=%d channel=%d err=%w", gr, ch, err)
@@ -137,7 +139,7 @@ func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 			if frameChannels == 2 {
 				left := reorderedValues[gr][0][:]
 				right := reorderedValues[gr][1][:]
-				if err := stereo.ApplyJointStereo(h.GetChannelMode(), h.GetModeExtension(), left, right); err != nil {
+				if err := stereo.ApplyJointStereo(h.GetSampleRate(), h.GetChannelMode(), h.GetModeExtension(), &sideInfo.Granule[gr][0], &scalefactors[gr][0], left, right, count1[gr][0], count1[gr][1]); err != nil {
 					return nil, 0, 0, fmt.Errorf("failed to apply joint stereo: frame granule=%d err=%w", gr, err)
 				}
 			}

@@ -5,6 +5,19 @@ import (
 	"testing"
 )
 
+func sameTable(got *common.HuffmanTable, want common.HuffmanTable) bool {
+	if got == nil {
+		return false
+	}
+	if got.Linbits != want.Linbits || got.TreeLen != want.TreeLen {
+		return false
+	}
+	if len(got.Data) == 0 || len(want.Data) == 0 {
+		return len(got.Data) == len(want.Data)
+	}
+	return &got.Data[0] == &want.Data[0]
+}
+
 func nextHuffmanIndex(table *common.HuffmanTable, idx int, bit uint32) int {
 	if bit != 0 {
 		for (table.Data[idx] & 0x00FF) >= 250 {
@@ -106,14 +119,15 @@ func TestSelectTable_LongBlock(t *testing.T) {
 		{0, 5},
 		{11, 5},
 		{12, 7},
-		{23, 7},
-		{24, 9},
+		{29, 7},
+		{30, 9},
 	} {
 		got, err := selectTable(44100, gc, tc.lineIndex)
 		if err != nil {
 			t.Fatalf("selectTable(%d) failed: %v", tc.lineIndex, err)
 		}
-		if got.Linbits != common.BaseTables[tc.wantTable].Linbits || len(got.Data) != len(common.BaseTables[tc.wantTable].Data) {
+		want := common.BaseTables[tc.wantTable]
+		if !sameTable(got, want) {
 			t.Fatalf("selectTable(%d) got table %+v, want table %d", tc.lineIndex, *got, tc.wantTable)
 		}
 	}
@@ -130,8 +144,9 @@ func TestSelectTable_LongBlock_Region1CountZero(t *testing.T) {
 	if err != nil {
 		t.Fatalf("selectTable failed: %v", err)
 	}
-	if got.Linbits != common.BaseTables[9].Linbits || len(got.Data) != len(common.BaseTables[9].Data) {
-		t.Fatalf("line 8 got table %+v, want table 9", *got)
+	want := common.BaseTables[7]
+	if !sameTable(got, want) {
+		t.Fatalf("line 8 got table %+v, want table 7", *got)
 	}
 }
 
@@ -151,6 +166,9 @@ func TestSelectTable_SwitchedWindow(t *testing.T) {
 	if got0.Linbits != 1 || len(got0.Data) != len(common.BaseTables[16].Data) {
 		t.Fatalf("region0 got %+v, want table 16", *got0)
 	}
+	if !sameTable(got0, common.BaseTables[16]) {
+		t.Fatalf("region0 got %+v, want table 16", *got0)
+	}
 
 	got1, err := selectTable(44100, gc, 36)
 	if err != nil {
@@ -158,6 +176,39 @@ func TestSelectTable_SwitchedWindow(t *testing.T) {
 	}
 	if got1.Linbits != 4 || len(got1.Data) != len(common.BaseTables[24].Data) {
 		t.Fatalf("region1 got %+v, want table 24", *got1)
+	}
+	if !sameTable(got1, common.BaseTables[24]) {
+		t.Fatalf("region1 got %+v, want table 24", *got1)
+	}
+}
+
+func TestSelectTable_StartBlock_UsesLongRegions(t *testing.T) {
+	gc := &common.GranuleChannelInfo{
+		TableSelect:  [3]byte{5, 7, 9},
+		Region0Count: 2,
+		Region1Count: 3,
+	}
+	gc.SetWindowSwitching(true)
+	gc.SetBlockType(common.BlockTypeStart)
+
+	for _, tc := range []struct {
+		lineIndex int
+		wantTable int
+	}{
+		{0, 5},
+		{11, 5},
+		{12, 7},
+		{29, 7},
+		{30, 9},
+	} {
+		got, err := selectTable(44100, gc, tc.lineIndex)
+		if err != nil {
+			t.Fatalf("selectTable(%d) failed: %v", tc.lineIndex, err)
+		}
+		want := common.BaseTables[tc.wantTable]
+		if !sameTable(got, want) {
+			t.Fatalf("selectTable(%d) got table %+v, want table %d", tc.lineIndex, *got, tc.wantTable)
+		}
 	}
 }
 
@@ -215,10 +266,11 @@ func TestDecodeHuffmanPair_Table1(t *testing.T) {
 	for _, bit := range code {
 		bw.write(1, bit)
 	}
+	bw.write(1, 0) // x sign bit
 
 	br := common.NewBitReader(bw.bytes())
 	var scratch uint32
-	x, y, err := decodeHuffmanPair(br, &table, len(code), &scratch)
+	x, y, err := decodeHuffmanPair(br, &table, len(code)+1, &scratch)
 	if err != nil {
 		t.Fatalf("decodeHuffmanPair failed: %v", err)
 	}
@@ -235,11 +287,13 @@ func TestDecodeHuffmanPair_Linbits(t *testing.T) {
 		bw.write(1, bit)
 	}
 	bw.write(1, 0b1)    // x linbit
+	bw.write(1, 0b0)    // x sign bit
 	bw.write(1, 0b0)    // y linbit
+	bw.write(1, 0b0)    // y sign bit
 
 	br := common.NewBitReader(bw.bytes())
 	var scratch uint32
-	x, y, err := decodeHuffmanPair(br, &table, len(code)+2, &scratch)
+	x, y, err := decodeHuffmanPair(br, &table, len(code)+4, &scratch)
 	if err != nil {
 		t.Fatalf("decodeHuffmanPair failed: %v", err)
 	}
@@ -267,10 +321,12 @@ func TestDecodeHuffmanQuad_Table33(t *testing.T) {
 	for _, bit := range code {
 		bw.write(1, bit)
 	}
+	bw.write(1, 0) // w sign bit
+	bw.write(1, 0) // y sign bit
 
 	br := common.NewBitReader(bw.bytes())
 	var scratch uint32
-	v, w, x, y, err := decodeHuffmanQuad(br, &table, len(code), &scratch)
+	v, w, x, y, err := decodeHuffmanQuad(br, &table, len(code)+2, &scratch)
 	if err != nil {
 		t.Fatalf("decodeHuffmanQuad failed: %v", err)
 	}

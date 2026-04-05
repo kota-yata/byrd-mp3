@@ -1,4 +1,0 @@
-- static/440hz.mp3: joint=5974, modeext10=5974, modeext01=0, modeext11=0
-- static/alarm.mp3: joint=1611, modeext00=877, modeext10=734, modeext01=0, modeext11=0
-- static/song.mp3: joint=6084, modeext00=1446, modeext10=4638, modeext01=0, modeext11=0
-- static/synth.mp3: joint=735, modeext10=735, modeext01=0, modeext11=0

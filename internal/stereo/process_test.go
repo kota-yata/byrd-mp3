@@ -1,7 +1,9 @@
 package stereo
 
 import (
+	"byrd/internal/common"
 	"byrd/internal/header"
+	"byrd/internal/maindata"
 	"math"
 	"testing"
 )
@@ -32,7 +34,7 @@ func TestApplyJointStereo_ModeExtMSOnly(t *testing.T) {
 	left[0] = 1
 	right[0] = -1
 
-	if err := ApplyJointStereo(header.ChannelModeJointStereo, header.ModeExtensionMSStereo, left, right); err != nil {
+	if err := ApplyJointStereo(44100, header.ChannelModeJointStereo, header.ModeExtensionMSStereo, &common.GranuleChannelInfo{}, &maindata.Scalefactors{}, left, right, 1, 1); err != nil {
 		t.Fatalf("ApplyJointStereo failed: %v", err)
 	}
 
@@ -47,18 +49,91 @@ func TestApplyJointStereo_NoOpWhenDisabled(t *testing.T) {
 	left[0] = 5
 	right[0] = 2
 
-	if err := ApplyJointStereo(header.ChannelModeStereo, header.ModeExtensionMSStereo, left, right); err != nil {
+	if err := ApplyJointStereo(44100, header.ChannelModeStereo, header.ModeExtensionMSStereo, &common.GranuleChannelInfo{}, &maindata.Scalefactors{}, left, right, 1, 1); err != nil {
 		t.Fatalf("ApplyJointStereo failed: %v", err)
 	}
 	if left[0] != 5 || right[0] != 2 {
 		t.Fatalf("non-joint stereo should be unchanged, got left=%f right=%f", left[0], right[0])
 	}
 
-	if err := ApplyJointStereo(header.ChannelModeJointStereo, header.ModeExtensionIntensityStereo, left, right); err != nil {
+	sfs := &maindata.Scalefactors{}
+	sfs.Long[0] = 7
+	if err := ApplyJointStereo(44100, header.ChannelModeJointStereo, header.ModeExtensionIntensityStereo, &common.GranuleChannelInfo{}, sfs, left, right, 0, 0); err != nil {
 		t.Fatalf("ApplyJointStereo failed: %v", err)
 	}
 	if left[0] != 5 || right[0] != 2 {
 		t.Fatalf("joint stereo without ms flag should be unchanged, got left=%f right=%f", left[0], right[0])
+	}
+}
+
+func TestApplyJointStereo_IntensityStereoLong(t *testing.T) {
+	left := make([]float64, 576)
+	right := make([]float64, 576)
+	left[350] = 10
+	left[300] = 3
+	right[300] = 1
+
+	sfs := &maindata.Scalefactors{}
+	sfs.Long[20] = 6
+
+	if err := ApplyJointStereo(44100, header.ChannelModeJointStereo, header.ModeExtensionIntensityStereo, &common.GranuleChannelInfo{}, sfs, left, right, 301, 301); err != nil {
+		t.Fatalf("ApplyJointStereo failed: %v", err)
+	}
+
+	if !almostEqual(left[350], 10) || !almostEqual(right[350], 0) {
+		t.Fatalf("line 350 got left=%f right=%f", left[350], right[350])
+	}
+}
+
+func TestApplyJointStereo_IntensityStereoShortMixed(t *testing.T) {
+	left := make([]float64, 576)
+	right := make([]float64, 576)
+	left[48] = 12
+	left[54] = 12
+	left[35] = 2
+	right[35] = 1
+
+	gc := &common.GranuleChannelInfo{}
+	gc.SetWindowSwitching(true)
+	gc.SetBlockType(common.BlockTypeShort)
+	gc.SetMixedBlockFlag(true)
+
+	sfs := &maindata.Scalefactors{}
+	sfs.Short[4][0] = 6
+	sfs.Short[4][1] = 7
+
+	if err := ApplyJointStereo(44100, header.ChannelModeJointStereo, header.ModeExtensionIntensityStereo, gc, sfs, left, right, 36, 36); err != nil {
+		t.Fatalf("ApplyJointStereo failed: %v", err)
+	}
+
+	if !almostEqual(left[48], 12) || !almostEqual(right[48], 0) {
+		t.Fatalf("window 0 line got left=%f right=%f", left[48], right[48])
+	}
+	if !almostEqual(left[54], 12) || !almostEqual(right[54], 0) {
+		t.Fatalf("window 1 line should remain unchanged, got left=%f right=%f", left[54], right[54])
+	}
+}
+
+func TestApplyJointStereo_IntensityAndMS(t *testing.T) {
+	left := make([]float64, 576)
+	right := make([]float64, 576)
+	left[350] = 4
+	left[300] = 2
+	right[300] = 1
+
+	sfs := &maindata.Scalefactors{}
+	sfs.Long[20] = 0
+
+	if err := ApplyJointStereo(44100, header.ChannelModeJointStereo, header.ModeExtensionIntensityAndMS, &common.GranuleChannelInfo{}, sfs, left, right, 351, 351); err != nil {
+		t.Fatalf("ApplyJointStereo failed: %v", err)
+	}
+
+	msLeft := (4 + 0) * MS_STEREO_SCALE
+	msRight := (4 - 0) * MS_STEREO_SCALE
+	wantLeft := msLeft
+	wantRight := msRight
+	if !almostEqual(left[350], wantLeft) || !almostEqual(right[350], wantRight) {
+		t.Fatalf("line 350 got left=%f right=%f want left=%f right=%f", left[350], right[350], wantLeft, wantRight)
 	}
 }
 

@@ -23,7 +23,7 @@ func selectTable(sampleRate uint16, gc *common.GranuleChannelInfo, spectralLineI
 	}
 
 	var tableIndex int
-	if !gc.GetWindowSwitching() {
+	if !gc.GetWindowSwitching() || gc.GetBlockType() != common.BlockTypeShort {
 		region1StartSFB := int(gc.Region0Count) + 1
 		region2StartSFB := int(gc.Region0Count) + int(gc.Region1Count) + 2
 		if region1StartSFB >= len(sfBands.Long) {
@@ -42,6 +42,9 @@ func selectTable(sampleRate uint16, gc *common.GranuleChannelInfo, spectralLineI
 			tableIndex = int(gc.TableSelect[2])
 		}
 	} else {
+		// Short-block Huffman regions are used only for pure/mixed short blocks.
+		// Start/end blocks keep long-block region boundaries even though
+		// window_switching is set.
 		region1Start := sfBands.Short[3] * SCALEFACTOR_SHORT_WINDOW_COUNT
 		if gc.GetMixedBlockFlag() {
 			region1Start = sfBands.Long[8]
@@ -92,6 +95,10 @@ func decodeHuffmanPair(br *common.BitReader, table *common.HuffmanTable, limit i
 	if len(table.Data) == 0 {
 		return 0, 0, fmt.Errorf("empty huffman table")
 	}
+	treeLen := table.TreeLen
+	if treeLen == 0 {
+		treeLen = len(table.Data)
+	}
 
 	idx := 0
 	for {
@@ -109,11 +116,44 @@ func decodeHuffmanPair(br *common.BitReader, table *common.HuffmanTable, limit i
 					}
 					x += int(*scratch)
 				}
+				if x != 0 {
+					if err := guardedReadBit(br, limit, scratch); err != nil {
+						return 0, 0, err
+					}
+					if *scratch == 1 {
+						x = -x
+					}
+				}
 				if y == 15 {
 					if err := guardedReadBits(br, limit, table.Linbits, scratch); err != nil {
 						return 0, 0, err
 					}
 					y += int(*scratch)
+				}
+				if y != 0 {
+					if err := guardedReadBit(br, limit, scratch); err != nil {
+						return 0, 0, err
+					}
+					if *scratch == 1 {
+						y = -y
+					}
+				}
+				return x, y, nil
+			}
+			if x != 0 {
+				if err := guardedReadBit(br, limit, scratch); err != nil {
+					return 0, 0, err
+				}
+				if *scratch == 1 {
+					x = -x
+				}
+			}
+			if y != 0 {
+				if err := guardedReadBit(br, limit, scratch); err != nil {
+					return 0, 0, err
+				}
+				if *scratch == 1 {
+					y = -y
 				}
 			}
 			return x, y, nil
@@ -139,6 +179,9 @@ func decodeHuffmanPair(br *common.BitReader, table *common.HuffmanTable, limit i
 			}
 			idx += int(table.Data[idx] >> 8)
 		}
+		if idx >= treeLen {
+			return 0, 0, fmt.Errorf("invalid huffman tree traversal")
+		}
 	}
 }
 
@@ -148,6 +191,10 @@ func decodeHuffmanQuad(br *common.BitReader, table *common.HuffmanTable, limit i
 	}
 	if len(table.Data) == 0 {
 		return 0, 0, 0, 0, fmt.Errorf("empty huffman table")
+	}
+	treeLen := table.TreeLen
+	if treeLen == 0 {
+		treeLen = len(table.Data)
 	}
 
 	idx := 0
@@ -161,6 +208,18 @@ func decodeHuffmanQuad(br *common.BitReader, table *common.HuffmanTable, limit i
 			w := int((node >> 2) & 0x1)
 			x := int((node >> 1) & 0x1)
 			y := int(node & 0x1)
+			values := []*int{&v, &w, &x, &y}
+			for _, value := range values {
+				if *value == 0 {
+					continue
+				}
+				if err := guardedReadBit(br, limit, scratch); err != nil {
+					return 0, 0, 0, 0, err
+				}
+				if *scratch == 1 {
+					*value = -*value
+				}
+			}
 			return v, w, x, y, nil
 		}
 
@@ -183,6 +242,9 @@ func decodeHuffmanQuad(br *common.BitReader, table *common.HuffmanTable, limit i
 				}
 			}
 			idx += int(table.Data[idx] >> 8)
+		}
+		if idx >= treeLen {
+			return 0, 0, 0, 0, fmt.Errorf("invalid huffman tree traversal")
 		}
 	}
 }
