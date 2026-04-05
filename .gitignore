@@ -1,2 +1,4 @@
 .DS_Store
 .gocache
+
+static/*.decoded.wav
