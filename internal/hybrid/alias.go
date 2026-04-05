@@ -39,7 +39,10 @@ func ApplyAliasReduction(gc *common.GranuleChannelInfo, values []float64) error 
 		return fmt.Errorf("alias reduction requires 576 spectral lines: got %d", len(values))
 	}
 
-	if gc.GetWindowSwitching() { // no need to apply alias reduction for short blocks
+	// Alias reduction is applied to long, start, and end blocks.
+	// It is skipped only for pure short blocks. Mixed blocks still need alias
+	// reduction on their lowest two long-block subbands.
+	if gc.GetWindowSwitching() && gc.GetBlockType() == common.BlockTypeShort && !gc.GetMixedBlockFlag() {
 		return nil
 	}
 
