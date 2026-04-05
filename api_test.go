@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 )
 
@@ -72,5 +74,35 @@ func TestConvertMP3FileToWAV(t *testing.T) {
 	}
 	if dataSize == 0 {
 		t.Fatalf("unexpected data size: %d", dataSize)
+	}
+}
+
+func TestWriteStaticDecodedWAVFiles(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join("static", "*.mp3"))
+	if err != nil {
+		t.Fatalf("failed to list static mp3 files: %v", err)
+	}
+	slices.Sort(paths)
+	if len(paths) == 0 {
+		t.Fatalf("no mp3 files found under static/")
+	}
+
+	for _, path := range paths {
+		path := path
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			outPath := strings.TrimSuffix(path, filepath.Ext(path)) + ".decoded.wav"
+			if err := ConvertMP3FileToWAV(path, outPath); err != nil {
+				t.Fatalf("ConvertMP3FileToWAV failed for %s: %v", filepath.Base(path), err)
+			}
+
+			info, err := os.Stat(outPath)
+			if err != nil {
+				t.Fatalf("failed to stat %s: %v", filepath.Base(outPath), err)
+			}
+			if info.Size() <= 44 {
+				t.Fatalf("wav output too small: %s size=%d", filepath.Base(outPath), info.Size())
+			}
+			t.Logf("wrote %s", outPath)
+		})
 	}
 }

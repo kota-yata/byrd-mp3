@@ -8,7 +8,6 @@ import (
 	"byrd/internal/maindata"
 	"byrd/internal/stereo"
 	"byrd/internal/synthesis"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
@@ -30,43 +29,6 @@ func TestParseStaticMP3RealData(t *testing.T) {
 	}
 }
 
-func TestWriteStaticDecodedWAVFiles(t *testing.T) {
-	paths := listStaticMP3Paths(t)
-
-	for _, path := range paths {
-		path := path
-		t.Run(filepath.Base(path), func(t *testing.T) {
-			f, err := OpenMP3File(path)
-			if err != nil {
-				t.Fatalf("failed to open %s: %v", filepath.Base(path), err)
-			}
-			defer f.Close()
-
-			samples, sampleRate, channels, err := DecodeMP3Frames(bufio.NewReader(f))
-			if err != nil {
-				t.Fatalf("failed to decode %s: %v", filepath.Base(path), err)
-			}
-			if len(samples) == 0 {
-				t.Fatalf("decoded samples are empty for %s", filepath.Base(path))
-			}
-
-			outPath := strings.TrimSuffix(path, filepath.Ext(path)) + ".decoded.wav"
-			if err := writePCMAsWAV(outPath, samples, sampleRate, channels); err != nil {
-				t.Fatalf("failed to write wav for %s: %v", filepath.Base(path), err)
-			}
-
-			info, err := os.Stat(outPath)
-			if err != nil {
-				t.Fatalf("failed to stat %s: %v", filepath.Base(outPath), err)
-			}
-			if info.Size() <= 44 {
-				t.Fatalf("wav output too small: %s size=%d", filepath.Base(outPath), info.Size())
-			}
-			t.Logf("wrote %s", outPath)
-		})
-	}
-}
-
 func listStaticMP3Paths(t *testing.T) []string {
 	t.Helper()
 
@@ -80,76 +42,6 @@ func listStaticMP3Paths(t *testing.T) []string {
 		t.Fatalf("no mp3 files found under static/")
 	}
 	return paths
-}
-
-func writePCMAsWAV(path string, samples []int16, sampleRate uint16, channels int) error {
-	if sampleRate == 0 {
-		return fmt.Errorf("invalid sample rate: 0")
-	}
-	if channels <= 0 {
-		return fmt.Errorf("invalid channels: %d", channels)
-	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	const bitsPerSample = 16
-	const bytesPerSample = bitsPerSample / 8
-
-	blockAlign := uint16(channels * bytesPerSample)
-	byteRate := uint32(sampleRate) * uint32(blockAlign)
-	dataSize := uint32(len(samples) * bytesPerSample)
-	riffSize := 36 + dataSize
-
-	if _, err := f.Write([]byte("RIFF")); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, riffSize); err != nil {
-		return err
-	}
-	if _, err := f.Write([]byte("WAVE")); err != nil {
-		return err
-	}
-	if _, err := f.Write([]byte("fmt ")); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, uint32(16)); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, uint16(1)); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, uint16(channels)); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, uint32(sampleRate)); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, byteRate); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, blockAlign); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, uint16(bitsPerSample)); err != nil {
-		return err
-	}
-	if _, err := f.Write([]byte("data")); err != nil {
-		return err
-	}
-	if err := binary.Write(f, binary.LittleEndian, dataSize); err != nil {
-		return err
-	}
-	for _, sample := range samples {
-		if err := binary.Write(f, binary.LittleEndian, sample); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func runParseRealDataTest(t *testing.T, path string) {
@@ -279,6 +171,8 @@ func runParseRealDataTest(t *testing.T, path string) {
 		var synthesisState [2]synthesis.PolyphaseState
 		var pcmSamples [2][576]float64
 		for gr := 0; gr < 2; gr++ {
+		var granuleScalefactors [2]maindata.Scalefactors
+		var granuleCount1 [2]int
 			for ch := 0; ch < channels; ch++ {
 				gc := &sideInfo.Granule[gr][ch]
 				part23Start := br.Pos
@@ -295,6 +189,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to parse scalefactors: %v", fileLabel, frameIndex, gr, ch, err)
 				}
 				prev[ch] = scalefactors
+				granuleScalefactors[ch] = scalefactors
 
 				spectralBuffer := spectralValues[ch][:]
 				bigValueLines, err := maindata.ParseBigValues(br, h.GetSampleRate(), gc, part23End, &spectralBuffer)
@@ -307,6 +202,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d ch=%d: failed to parse count1 values: %v", fileLabel, frameIndex, gr, ch, err)
 				}
+				granuleCount1[ch] = int(gc.BigValues)*2 + count1Lines
 				requantizedBuffer := requantizedValues[ch][:]
 				if err := maindata.Requantize(h.GetSampleRate(), gc, &scalefactors, spectralBuffer, &requantizedBuffer); err != nil {
 					logFrameSummary()
@@ -370,7 +266,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 			if channels == 2 {
 				left := stereoValues[0][:]
 				right := stereoValues[1][:]
-				if err := stereo.ApplyJointStereo(h.GetChannelMode(), h.GetModeExtension(), left, right); err != nil {
+				if err := stereo.ApplyJointStereo(h.GetSampleRate(), h.GetChannelMode(), h.GetModeExtension(), &sideInfo.Granule[gr][0], &granuleScalefactors[0], left, right, granuleCount1[0], granuleCount1[1]); err != nil {
 					logFrameSummary()
 					t.Fatalf("file=%s frame=%d gr=%d: failed to apply joint stereo: %v", fileLabel, frameIndex, gr, err)
 				}
