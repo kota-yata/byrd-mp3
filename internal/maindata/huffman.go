@@ -60,14 +60,14 @@ func selectTable(sampleRate uint16, gc *common.GranuleChannelInfo, spectralLineI
 		return &huffmanZeroTable, nil
 	}
 
-	table, ok := common.BaseTables[tableIndex]
-	if !ok {
+	if tableIndex < 0 || tableIndex >= len(common.BaseTables) {
 		return nil, fmt.Errorf("unknown huffman table: %d", tableIndex)
 	}
+	table := &common.BaseTables[tableIndex]
 	if table.Data == nil {
 		return nil, fmt.Errorf("unsupported huffman table: %d", tableIndex)
 	}
-	return &table, nil
+	return table, nil
 }
 
 func guardedReadBit(br *common.BitReader, limit int, scratch *uint32) error {
