@@ -3,21 +3,25 @@ package decoder
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/kota-yata/byrd-mp3/internal/common"
 	"github.com/kota-yata/byrd-mp3/internal/header"
 	"github.com/kota-yata/byrd-mp3/internal/hybrid"
 	"github.com/kota-yata/byrd-mp3/internal/maindata"
 	"github.com/kota-yata/byrd-mp3/internal/stereo"
 	"github.com/kota-yata/byrd-mp3/internal/synthesis"
-	"io"
-	"os"
 )
 
 const GRANULE_COUNT = 2
 
 func OpenMP3File(path string) (io.ReadCloser, error) {
-	ext := ".mp3"
-	if len(path) < len(ext) || path[len(path)-len(ext):] != ext {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".mp3":
+	default:
 		return nil, fmt.Errorf("unsupported file format: %s", path)
 	}
 	return os.Open(path)
