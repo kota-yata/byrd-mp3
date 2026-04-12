@@ -35,13 +35,13 @@ func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 	var scalefactors [2][2]maindata.Scalefactors
 	var count1 [2][2]int
 	var spectralValues [2][2][576]int
-	var requantizedValues [2][2][576]float64
-	var reorderedValues [2][2][576]float64
-	var hybridValues [2][2][576]float64
-	var overlapState [2][32][18]float64
-	var hybridSamples [2][2][32][18]float64
+	var requantizedValues [2][2][576]float32
+	var reorderedValues [2][2][576]float32
+	var hybridValues [2][2][576]float32
+	var overlapState [2][32][18]float32
+	var hybridSamples [2][2][32][18]float32
 	var synthesisState [2]synthesis.PolyphaseState
-	var pcmSamples [2][2][576]float64
+	var pcmSamples [2][2][576]float32
 	var out []int16
 	var sampleRate uint16
 	channels := 0

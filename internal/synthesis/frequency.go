@@ -1,6 +1,6 @@
 package synthesis
 
-func ApplyFrequencyInversion(samples *[32][18]float64) {
+func ApplyFrequencyInversion(samples *[32][18]float32) {
 	if samples == nil {
 		return
 	}

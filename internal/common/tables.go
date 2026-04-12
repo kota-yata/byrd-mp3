@@ -69,7 +69,7 @@ var (
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-var SynthDtbl = [512]float64{
+var SynthDtbl = [512]float32{
 	0.000000000, -0.000015259, -0.000015259, -0.000015259,
 	-0.000015259, -0.000015259, -0.000015259, -0.000030518,
 	-0.000030518, -0.000030518, -0.000030518, -0.000045776,

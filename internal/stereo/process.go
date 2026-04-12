@@ -2,14 +2,15 @@ package stereo
 
 import (
 	"fmt"
+
 	"github.com/kota-yata/byrd-mp3/internal/common"
 	"github.com/kota-yata/byrd-mp3/internal/header"
 	"github.com/kota-yata/byrd-mp3/internal/maindata"
 )
 
-const MS_STEREO_SCALE = 0.7071067811865476 // 1 / sqrt(2)
+const MS_STEREO_SCALE float32 = 0.70710677 // 1 / sqrt(2)
 
-var intensityStereoRatios = [6]float64{
+var intensityStereoRatios = [6]float32{
 	0.000000,
 	0.267949,
 	0.577350,
@@ -22,7 +23,7 @@ var intensityStereoRatios = [6]float64{
 // To reconstruct the left and right channels, we can use the following formulas:
 // Left = (M + S) / sqrt(2)
 // Right = (M - S) / sqrt(2)
-func ApplyMSStereo(left []float64, right []float64) error {
+func ApplyMSStereo(left []float32, right []float32) error {
 	if len(left) != 576 || len(right) != 576 {
 		return fmt.Errorf("ms stereo requires 576 spectral lines: left=%d right=%d", len(left), len(right))
 	}
@@ -37,7 +38,7 @@ func ApplyMSStereo(left []float64, right []float64) error {
 	return nil
 }
 
-func ApplyJointStereo(sampleRate uint16, channelMode header.ChannelMode, modeExt header.ModeExtension, gc *common.GranuleChannelInfo, scalefactors *maindata.Scalefactors, left []float64, right []float64, leftCount1 int, rightCount1 int) error {
+func ApplyJointStereo(sampleRate uint16, channelMode header.ChannelMode, modeExt header.ModeExtension, gc *common.GranuleChannelInfo, scalefactors *maindata.Scalefactors, left []float32, right []float32, leftCount1 int, rightCount1 int) error {
 	if channelMode != header.ChannelModeJointStereo {
 		return nil
 	}
@@ -66,7 +67,7 @@ func ApplyJointStereo(sampleRate uint16, channelMode header.ChannelMode, modeExt
 	return applyIntensityStereo(sampleRate, gc, scalefactors, rightCount1, left, right)
 }
 
-func applyMSStereoUpTo(left []float64, right []float64, maxPos int) error {
+func applyMSStereoUpTo(left []float32, right []float32, maxPos int) error {
 	if len(left) != 576 || len(right) != 576 {
 		return fmt.Errorf("ms stereo requires 576 spectral lines: left=%d right=%d", len(left), len(right))
 	}
@@ -85,7 +86,7 @@ func applyMSStereoUpTo(left []float64, right []float64, maxPos int) error {
 	return nil
 }
 
-func applyIntensityStereo(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *maindata.Scalefactors, count1Start int, left []float64, right []float64) error {
+func applyIntensityStereo(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *maindata.Scalefactors, count1Start int, left []float32, right []float32) error {
 	sfBands, ok := common.SCALEFACTOR_BAND_INDICES[sampleRate]
 	if !ok {
 		return fmt.Errorf("unsupported sample rate for intensity stereo: %d", sampleRate)
@@ -121,7 +122,7 @@ func applyIntensityStereo(sampleRate uint16, gc *common.GranuleChannelInfo, scal
 	return nil
 }
 
-func applyIntensityLongBand(bands [23]int, isPos uint8, sfb int, left []float64, right []float64) {
+func applyIntensityLongBand(bands [23]int, isPos uint8, sfb int, left []float32, right []float32) {
 	leftRatio, rightRatio, ok := intensityStereoFactors(isPos)
 	if !ok {
 		return
@@ -134,7 +135,7 @@ func applyIntensityLongBand(bands [23]int, isPos uint8, sfb int, left []float64,
 	}
 }
 
-func applyIntensityShortBand(bands [14]int, isPos [3]uint8, sfb int, left []float64, right []float64) {
+func applyIntensityShortBand(bands [14]int, isPos [3]uint8, sfb int, left []float32, right []float32) {
 	winLen := bands[sfb+1] - bands[sfb]
 	for win := 0; win < maindata.SCALEFACTOR_SHORT_WINDOW_COUNT; win++ {
 		leftRatio, rightRatio, ok := intensityStereoFactors(isPos[win])
@@ -150,7 +151,7 @@ func applyIntensityShortBand(bands [14]int, isPos [3]uint8, sfb int, left []floa
 	}
 }
 
-func intensityStereoFactors(isPos uint8) (float64, float64, bool) {
+func intensityStereoFactors(isPos uint8) (float32, float32, bool) {
 	if isPos >= 7 {
 		return 0, 0, false
 	}

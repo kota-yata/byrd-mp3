@@ -5,7 +5,7 @@ import (
 	"github.com/kota-yata/byrd-mp3/internal/common"
 )
 
-func Reorder(sampleRate uint16, gc *common.GranuleChannelInfo, in []float64, out *[]float64) error {
+func Reorder(sampleRate uint16, gc *common.GranuleChannelInfo, in []float32, out *[]float32) error {
 	if gc == nil {
 		return fmt.Errorf("nil granule channel info")
 	}

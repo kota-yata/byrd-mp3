@@ -2,27 +2,28 @@ package synthesis
 
 import (
 	"fmt"
-	"github.com/kota-yata/byrd-mp3/internal/common"
 	"math"
+
+	"github.com/kota-yata/byrd-mp3/internal/common"
 )
 
 type PolyphaseState struct {
-	v [1024]float64
+	v [1024]float32
 }
 
 var synthesisMatrix = buildSynthesisMatrix()
 
-func buildSynthesisMatrix() [64][32]float64 {
-	var m [64][32]float64
+func buildSynthesisMatrix() [64][32]float32 {
+	var m [64][32]float32
 	for i := range 64 {
 		for k := range 32 {
-			m[i][k] = math.Cos(math.Pi / 64 * float64((i+16)*(2*k+1)))
+			m[i][k] = float32(math.Cos(math.Pi / 64 * float64((i+16)*(2*k+1))))
 		}
 	}
 	return m
 }
 
-func dotProduct32(a *[32]float64, b *[32]float64) float64 {
+func dotProduct32(a *[32]float32, b *[32]float32) float32 {
 	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3] +
 		a[4]*b[4] + a[5]*b[5] + a[6]*b[6] + a[7]*b[7] +
 		a[8]*b[8] + a[9]*b[9] + a[10]*b[10] + a[11]*b[11] +
@@ -33,14 +34,14 @@ func dotProduct32(a *[32]float64, b *[32]float64) float64 {
 		a[28]*b[28] + a[29]*b[29] + a[30]*b[30] + a[31]*b[31]
 }
 
-func sumWindowColumn16(u *[512]float64, column int) float64 {
+func sumWindowColumn16(u *[512]float32, column int) float32 {
 	return u[column] + u[column+32] + u[column+64] + u[column+96] +
 		u[column+128] + u[column+160] + u[column+192] + u[column+224] +
 		u[column+256] + u[column+288] + u[column+320] + u[column+352] +
 		u[column+384] + u[column+416] + u[column+448] + u[column+480]
 }
 
-func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64) error {
+func SynthesizeSubbandSamples(in []float32, state *PolyphaseState, out []float32) error {
 	if len(in) != 32 {
 		return fmt.Errorf("polyphase synthesis requires 32 subband samples: got %d", len(in))
 	}
@@ -51,8 +52,8 @@ func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64
 		return fmt.Errorf("polyphase synthesis requires 32 output samples: got %d", len(out))
 	}
 
-	var x [64]float64
-	inVec := (*[32]float64)(in)
+	var x [64]float32
+	inVec := (*[32]float32)(in)
 	for i := range 64 {
 		x[i] = dotProduct32(&synthesisMatrix[i], inVec)
 	}
@@ -60,7 +61,7 @@ func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64
 	copy(state.v[64:], state.v[:960])
 	copy(state.v[:64], x[:])
 
-	var u [512]float64
+	var u [512]float32
 	for i := 0; i < 8; i++ {
 		copy(u[i*64:i*64+32], state.v[i*128:i*128+32])
 		copy(u[i*64+32:i*64+64], state.v[i*128+96:i*128+128])
@@ -78,7 +79,7 @@ func SynthesizeSubbandSamples(in []float64, state *PolyphaseState, out []float64
 	return nil
 }
 
-func SynthesizeGranule(in *[32][18]float64, state *PolyphaseState, out *[576]float64) error {
+func SynthesizeGranule(in *[32][18]float32, state *PolyphaseState, out *[576]float32) error {
 	if in == nil {
 		return fmt.Errorf("nil hybrid input")
 	}
@@ -89,8 +90,8 @@ func SynthesizeGranule(in *[32][18]float64, state *PolyphaseState, out *[576]flo
 		return fmt.Errorf("nil pcm output")
 	}
 
-	var subbandIn [32]float64
-	var slotOut [32]float64
+	var subbandIn [32]float32
+	var slotOut [32]float32
 	for ss := 0; ss < 18; ss++ {
 		for sb := 0; sb < 32; sb++ {
 			subbandIn[sb] = in[sb][ss]

@@ -9,8 +9,8 @@ import (
 )
 
 func TestApplyMSStereo(t *testing.T) {
-	left := make([]float64, 576)
-	right := make([]float64, 576)
+	left := make([]float32, 576)
+	right := make([]float32, 576)
 	left[0] = 2
 	right[0] = 0
 	left[1] = 3
@@ -29,8 +29,8 @@ func TestApplyMSStereo(t *testing.T) {
 }
 
 func TestApplyJointStereo_ModeExtMSOnly(t *testing.T) {
-	left := make([]float64, 576)
-	right := make([]float64, 576)
+	left := make([]float32, 576)
+	right := make([]float32, 576)
 	left[0] = 1
 	right[0] = -1
 
@@ -44,8 +44,8 @@ func TestApplyJointStereo_ModeExtMSOnly(t *testing.T) {
 }
 
 func TestApplyJointStereo_NoOpWhenDisabled(t *testing.T) {
-	left := make([]float64, 576)
-	right := make([]float64, 576)
+	left := make([]float32, 576)
+	right := make([]float32, 576)
 	left[0] = 5
 	right[0] = 2
 
@@ -67,8 +67,8 @@ func TestApplyJointStereo_NoOpWhenDisabled(t *testing.T) {
 }
 
 func TestApplyJointStereo_IntensityStereoLong(t *testing.T) {
-	left := make([]float64, 576)
-	right := make([]float64, 576)
+	left := make([]float32, 576)
+	right := make([]float32, 576)
 	left[350] = 10
 	left[300] = 3
 	right[300] = 1
@@ -86,8 +86,8 @@ func TestApplyJointStereo_IntensityStereoLong(t *testing.T) {
 }
 
 func TestApplyJointStereo_IntensityStereoShortMixed(t *testing.T) {
-	left := make([]float64, 576)
-	right := make([]float64, 576)
+	left := make([]float32, 576)
+	right := make([]float32, 576)
 	left[48] = 12
 	left[54] = 12
 	left[35] = 2
@@ -115,8 +115,8 @@ func TestApplyJointStereo_IntensityStereoShortMixed(t *testing.T) {
 }
 
 func TestApplyJointStereo_IntensityAndMS(t *testing.T) {
-	left := make([]float64, 576)
-	right := make([]float64, 576)
+	left := make([]float32, 576)
+	right := make([]float32, 576)
 	left[350] = 4
 	left[300] = 2
 	right[300] = 1
@@ -138,12 +138,12 @@ func TestApplyJointStereo_IntensityAndMS(t *testing.T) {
 }
 
 func TestApplyMSStereo_InvalidLength(t *testing.T) {
-	if err := ApplyMSStereo(make([]float64, 10), make([]float64, 576)); err == nil {
+	if err := ApplyMSStereo(make([]float32, 10), make([]float32, 576)); err == nil {
 		t.Fatalf("expected invalid length error")
 	}
 }
 
-func almostEqual(a, b float64) bool {
-	const epsilon = 1e-12
-	return math.Abs(a-b) <= epsilon
+func almostEqual(a, b float32) bool {
+	const epsilon = 1e-5
+	return math.Abs(float64(a-b)) <= epsilon
 }

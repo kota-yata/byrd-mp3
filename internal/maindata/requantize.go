@@ -11,8 +11,7 @@ const (
 	mixedShortStartSFB = 3
 )
 
-// TODO: float64 is used here. optimize to float32 or fixed-point later if slow.
-func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, spectralValues []int, out *[]float64) error {
+func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, spectralValues []int, out *[]float32) error {
 	if gc == nil {
 		return fmt.Errorf("nil granule channel info")
 	}
@@ -59,7 +58,7 @@ func Requantize(sampleRate uint16, gc *common.GranuleChannelInfo, scalefactors *
 	return nil
 }
 
-func requantizeLongLine(is int, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, sfb int) float64 {
+func requantizeLongLine(is int, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, sfb int) float32 {
 	pretab := 0
 	if gc.GetPreflag() && sfb < len(common.PRETAB) {
 		pretab = int(common.PRETAB[sfb])
@@ -72,10 +71,10 @@ func requantizeLongLine(is int, gc *common.GranuleChannelInfo, scalefactors *Sca
 	// xr[i] = sign(is[i]) * |is[i]|^(4/3) *
 	//   2^(-(210 - global_gain + 2*(1+scalefac_scale)*(scalefac_l[sfb] + preflag*pretab[sfb])) / 4)
 	q := 210 - int(gc.GlobalGain) + 2*scalefacMultiplier*(int(scalefactors.Long[sfb])+pretab)
-	return signedPow43(is) * math.Pow(2.0, -float64(q)/4.0)
+	return signedPow43(is) * float32(math.Pow(2.0, -float64(q)/4.0))
 }
 
-func requantizeShortLine(is int, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, sfb int, win int) float64 {
+func requantizeShortLine(is int, gc *common.GranuleChannelInfo, scalefactors *Scalefactors, sfb int, win int) float32 {
 	scalefacMultiplier := 1
 	if gc.GetScalefacScale() {
 		scalefacMultiplier = 2
@@ -84,12 +83,12 @@ func requantizeShortLine(is int, gc *common.GranuleChannelInfo, scalefactors *Sc
 	// xr[i] = sign(is[i]) * |is[i]|^(4/3) *
 	//   2^(-(210 - global_gain + 8*subblock_gain[w] + 2*(1+scalefac_scale)*scalefac_s[sfb][w]) / 4)
 	q := 210 - int(gc.GlobalGain) + 8*int(gc.SubblockGain[win]) + 2*scalefacMultiplier*int(scalefactors.Short[sfb][win])
-	return signedPow43(is) * math.Pow(2.0, -float64(q)/4.0)
+	return signedPow43(is) * float32(math.Pow(2.0, -float64(q)/4.0))
 }
 
-func signedPow43(is int) float64 {
-	mag := math.Pow(math.Abs(float64(is)), 4.0/3.0)
-	return math.Copysign(mag, float64(is))
+func signedPow43(is int) float32 {
+	mag := float32(math.Pow(math.Abs(float64(is)), 4.0/3.0))
+	return float32(math.Copysign(float64(mag), float64(is)))
 }
 
 func longSFBForLine(longBands [23]int, line int) int {

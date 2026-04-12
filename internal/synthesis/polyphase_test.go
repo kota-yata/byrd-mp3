@@ -4,8 +4,8 @@ import "testing"
 
 func TestSynthesizeSubbandSamples_ZeroInput(t *testing.T) {
 	var state PolyphaseState
-	in := make([]float64, 32)
-	out := make([]float64, 32)
+	in := make([]float32, 32)
+	out := make([]float32, 32)
 
 	if err := SynthesizeSubbandSamples(in, &state, out); err != nil {
 		t.Fatalf("SynthesizeSubbandSamples failed: %v", err)
@@ -19,9 +19,9 @@ func TestSynthesizeSubbandSamples_ZeroInput(t *testing.T) {
 
 func TestSynthesizeSubbandSamples_Stateful(t *testing.T) {
 	var state PolyphaseState
-	in := make([]float64, 32)
+	in := make([]float32, 32)
 	in[0] = 1
-	out := make([]float64, 32)
+	out := make([]float32, 32)
 
 	if err := SynthesizeSubbandSamples(in, &state, out); err != nil {
 		t.Fatalf("SynthesizeSubbandSamples failed: %v", err)
@@ -36,8 +36,8 @@ func TestSynthesizeSubbandSamples_Stateful(t *testing.T) {
 		t.Fatalf("expected non-zero output")
 	}
 
-	zeroIn := make([]float64, 32)
-	next := make([]float64, 32)
+	zeroIn := make([]float32, 32)
+	next := make([]float32, 32)
 	if err := SynthesizeSubbandSamples(zeroIn, &state, next); err != nil {
 		t.Fatalf("SynthesizeSubbandSamples second call failed: %v", err)
 	}
@@ -53,11 +53,11 @@ func TestSynthesizeSubbandSamples_Stateful(t *testing.T) {
 }
 
 func TestSynthesizeGranule(t *testing.T) {
-	var in [32][18]float64
+	var in [32][18]float32
 	in[0][0] = 1
 	in[1][1] = 1
 	var state PolyphaseState
-	var out [576]float64
+	var out [576]float32
 
 	if err := SynthesizeGranule(&in, &state, &out); err != nil {
 		t.Fatalf("SynthesizeGranule failed: %v", err)

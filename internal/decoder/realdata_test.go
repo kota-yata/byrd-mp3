@@ -162,14 +162,14 @@ func runParseRealDataTest(t *testing.T, path string) {
 		br := common.NewBitReader(mainData)
 		var prev [2]maindata.Scalefactors
 		var spectralValues [2][576]int
-		var requantizedValues [2][576]float64
-		var reorderedValues [2][576]float64
-		var stereoValues [2][576]float64
-		var hybridValues [2][576]float64
-		var overlapState [2][32][18]float64
-		var hybridSamples [2][32][18]float64
+		var requantizedValues [2][576]float32
+		var reorderedValues [2][576]float32
+		var stereoValues [2][576]float32
+		var hybridValues [2][576]float32
+		var overlapState [2][32][18]float32
+		var hybridSamples [2][32][18]float32
 		var synthesisState [2]synthesis.PolyphaseState
-		var pcmSamples [2][576]float64
+		var pcmSamples [2][576]float32
 		for gr := 0; gr < 2; gr++ {
 			var granuleScalefactors [2]maindata.Scalefactors
 			var granuleCount1 [2]int

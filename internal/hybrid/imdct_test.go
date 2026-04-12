@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func referenceIMDCTLong(in []float64, blockType common.BlockType) [36]float64 {
-	var out [36]float64
-	var window *[36]float64
+func referenceIMDCTLong(in []float32, blockType common.BlockType) [36]float32 {
+	var out [36]float32
+	var window *[36]float32
 	switch blockType {
 	case common.BlockTypeStart:
 		window = &startWindow
@@ -20,53 +20,53 @@ func referenceIMDCTLong(in []float64, blockType common.BlockType) [36]float64 {
 	for n := 0; n < 36; n++ {
 		sum := 0.0
 		for k := 0; k < 18; k++ {
-			sum += in[k] * math.Cos(math.Pi/72*float64((2*n+19)*(2*k+1)))
+			sum += float64(in[k]) * math.Cos(math.Pi/72*float64((2*n+19)*(2*k+1)))
 		}
-		out[n] = sum * window[n]
+		out[n] = float32(sum) * window[n]
 	}
 	return out
 }
 
-func referenceIMDCTShort(in []float64) [36]float64 {
-	var out [36]float64
+func referenceIMDCTShort(in []float32) [36]float32 {
+	var out [36]float32
 	for win := 0; win < 3; win++ {
 		for n := 0; n < 12; n++ {
 			sum := 0.0
 			for k := 0; k < 6; k++ {
-				sum += in[3*k+win] * math.Cos(math.Pi/24*float64((2*n+7)*(2*k+1)))
+				sum += float64(in[3*k+win]) * math.Cos(math.Pi/24*float64((2*n+7)*(2*k+1)))
 			}
-			out[6*win+n+6] += sum * shortWindow[n]
+			out[6*win+n+6] += float32(sum) * shortWindow[n]
 		}
 	}
 	return out
 }
 
-func assertClose36(t *testing.T, got [36]float64, want [36]float64, label string) {
+func assertClose36(t *testing.T, got [36]float32, want [36]float32, label string) {
 	t.Helper()
 	for i := range got {
-		if math.Abs(got[i]-want[i]) > 1e-12 {
+		if math.Abs(float64(got[i]-want[i])) > 1e-5 {
 			t.Fatalf("%s[%d] got %.12f, want %.12f", label, i, got[i], want[i])
 		}
 	}
 }
 
 func TestIMDCTLong_MatchesReference(t *testing.T) {
-	in := make([]float64, 18)
+	in := make([]float32, 18)
 	for i := range in {
-		in[i] = math.Sin(float64(i)+0.25) / 7
+		in[i] = float32(math.Sin(float64(i)+0.25) / 7)
 	}
-	var got [36]float64
+	var got [36]float32
 	imdctLong(in, common.BlockTypeLong, &got)
 	want := referenceIMDCTLong(in, common.BlockTypeLong)
 	assertClose36(t, got, want, "imdctLong")
 }
 
 func TestIMDCTShort_MatchesReference(t *testing.T) {
-	in := make([]float64, 18)
+	in := make([]float32, 18)
 	for i := range in {
-		in[i] = math.Cos(float64(i)+0.5) / 9
+		in[i] = float32(math.Cos(float64(i)+0.5) / 9)
 	}
-	var got [36]float64
+	var got [36]float32
 	imdctShort(in, &got)
 	want := referenceIMDCTShort(in)
 	assertClose36(t, got, want, "imdctShort")
@@ -74,9 +74,9 @@ func TestIMDCTShort_MatchesReference(t *testing.T) {
 
 func TestHybridSynthesis_ZeroInput(t *testing.T) {
 	gc := &common.GranuleChannelInfo{}
-	values := make([]float64, 576)
-	var overlap [32][18]float64
-	var out [32][18]float64
+	values := make([]float32, 576)
+	var overlap [32][18]float32
+	var out [32][18]float32
 
 	if err := HybridSynthesis(gc, values, &overlap, &out); err != nil {
 		t.Fatalf("HybridSynthesis failed: %v", err)
@@ -93,10 +93,10 @@ func TestHybridSynthesis_ZeroInput(t *testing.T) {
 
 func TestHybridSynthesis_LongBlockOverlap(t *testing.T) {
 	gc := &common.GranuleChannelInfo{}
-	values := make([]float64, 576)
+	values := make([]float32, 576)
 	values[0] = 1
-	var overlap [32][18]float64
-	var out [32][18]float64
+	var overlap [32][18]float32
+	var out [32][18]float32
 
 	if err := HybridSynthesis(gc, values, &overlap, &out); err != nil {
 		t.Fatalf("HybridSynthesis failed: %v", err)
@@ -116,8 +116,8 @@ func TestHybridSynthesis_LongBlockOverlap(t *testing.T) {
 		t.Fatalf("expected non-zero output and overlap, got out=%d overlap=%d", nonZeroOut, nonZeroOverlap)
 	}
 
-	values = make([]float64, 576)
-	var next [32][18]float64
+	values = make([]float32, 576)
+	var next [32][18]float32
 	if err := HybridSynthesis(gc, values, &overlap, &next); err != nil {
 		t.Fatalf("HybridSynthesis second call failed: %v", err)
 	}
@@ -136,12 +136,12 @@ func TestHybridSynthesis_ShortBlock(t *testing.T) {
 	gc := &common.GranuleChannelInfo{}
 	gc.SetWindowSwitching(true)
 	gc.SetBlockType(common.BlockTypeShort)
-	values := make([]float64, 576)
+	values := make([]float32, 576)
 	values[0] = 1
 	values[1] = 2
 	values[2] = 3
-	var overlap [32][18]float64
-	var out [32][18]float64
+	var overlap [32][18]float32
+	var out [32][18]float32
 
 	if err := HybridSynthesis(gc, values, &overlap, &out); err != nil {
 		t.Fatalf("HybridSynthesis failed: %v", err)
@@ -163,12 +163,12 @@ func TestHybridSynthesis_MixedBlockUsesLongForFirstSubbands(t *testing.T) {
 	gc.SetWindowSwitching(true)
 	gc.SetBlockType(common.BlockTypeShort)
 	gc.SetMixedBlockFlag(true)
-	values := make([]float64, 576)
+	values := make([]float32, 576)
 	values[17] = 1
 	values[35] = 1
 	values[36] = 1
-	var overlap [32][18]float64
-	var out [32][18]float64
+	var overlap [32][18]float32
+	var out [32][18]float32
 
 	if err := HybridSynthesis(gc, values, &overlap, &out); err != nil {
 		t.Fatalf("HybridSynthesis failed: %v", err)

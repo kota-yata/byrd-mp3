@@ -3,7 +3,7 @@ package synthesis
 import "testing"
 
 func TestApplyFrequencyInversion(t *testing.T) {
-	var samples [32][18]float64
+	var samples [32][18]float32
 	samples[0][1] = 1
 	samples[1][0] = 2
 	samples[1][1] = 3

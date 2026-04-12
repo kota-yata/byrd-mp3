@@ -7,7 +7,7 @@ import (
 
 func TestApplyAliasReduction_LongBlock(t *testing.T) {
 	gc := &common.GranuleChannelInfo{}
-	values := make([]float64, 576)
+	values := make([]float32, 576)
 	values[17] = 2
 	values[18] = 1
 
@@ -27,7 +27,7 @@ func TestApplyAliasReduction_PureShortNoOp(t *testing.T) {
 	gc.SetWindowSwitching(true)
 	gc.SetBlockType(common.BlockTypeShort)
 
-	values := make([]float64, 576)
+	values := make([]float32, 576)
 	values[17] = 2
 	values[18] = 1
 
@@ -45,7 +45,7 @@ func TestApplyAliasReduction_MixedBlockFirstBoundaryOnly(t *testing.T) {
 	gc.SetBlockType(common.BlockTypeShort)
 	gc.SetMixedBlockFlag(true)
 
-	values := make([]float64, 576)
+	values := make([]float32, 576)
 	values[17] = 2
 	values[18] = 1
 	values[35] = 4
@@ -61,7 +61,7 @@ func TestApplyAliasReduction_MixedBlockFirstBoundaryOnly(t *testing.T) {
 }
 
 func TestApplyAliasReduction_InvalidLength(t *testing.T) {
-	if err := ApplyAliasReduction(&common.GranuleChannelInfo{}, make([]float64, 10)); err == nil {
+	if err := ApplyAliasReduction(&common.GranuleChannelInfo{}, make([]float32, 10)); err == nil {
 		t.Fatalf("expected invalid length error")
 	}
 }

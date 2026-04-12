@@ -4,8 +4,8 @@ package synthesis
 
 import "math"
 
-func QuantizeSample(sample float64) int16 {
-	s := int(math.Round(sample * 32767)) // 16-bit PCM
+func QuantizeSample(sample float32) int16 {
+	s := int(math.Round(float64(sample * 32767))) // 16-bit PCM
 	if s > 32767 {
 		s = 32767
 	}

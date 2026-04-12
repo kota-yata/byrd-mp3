@@ -2,8 +2,9 @@ package hybrid
 
 import (
 	"fmt"
-	"github.com/kota-yata/byrd-mp3/internal/common"
 	"math"
+
+	"github.com/kota-yata/byrd-mp3/internal/common"
 )
 
 var longWindow = buildLongWindow()
@@ -13,65 +14,65 @@ var endWindow = buildEndWindow()
 var imdctLongTable = buildIMDCTLongTable()
 var imdctShortTable = buildIMDCTShortTable()
 
-func buildLongWindow() [36]float64 {
-	var w [36]float64
+func buildLongWindow() [36]float32 {
+	var w [36]float32
 	for i := range w {
-		w[i] = math.Sin(math.Pi / 36 * (float64(i) + 0.5))
+		w[i] = float32(math.Sin(math.Pi / 36 * (float64(i) + 0.5)))
 	}
 	return w
 }
 
-func buildStartWindow() [36]float64 {
-	var w [36]float64
+func buildStartWindow() [36]float32 {
+	var w [36]float32
 	for i := 0; i < 18; i++ {
-		w[i] = math.Sin(math.Pi / 36 * (float64(i) + 0.5))
+		w[i] = float32(math.Sin(math.Pi / 36 * (float64(i) + 0.5)))
 	}
 	for i := 18; i < 24; i++ {
 		w[i] = 1
 	}
 	for i := 24; i < 30; i++ {
-		w[i] = math.Sin(math.Pi / 12 * (float64(i-18) + 0.5))
+		w[i] = float32(math.Sin(math.Pi / 12 * (float64(i-18) + 0.5)))
 	}
 	return w
 }
 
-func buildShortWindow() [12]float64 {
-	var w [12]float64
+func buildShortWindow() [12]float32 {
+	var w [12]float32
 	for i := range w {
-		w[i] = math.Sin(math.Pi / 12 * (float64(i) + 0.5))
+		w[i] = float32(math.Sin(math.Pi / 12 * (float64(i) + 0.5)))
 	}
 	return w
 }
 
-func buildEndWindow() [36]float64 {
-	var w [36]float64
+func buildEndWindow() [36]float32 {
+	var w [36]float32
 	for i := 6; i < 12; i++ {
-		w[i] = math.Sin(math.Pi / 12 * (float64(i-6) + 0.5))
+		w[i] = float32(math.Sin(math.Pi / 12 * (float64(i-6) + 0.5)))
 	}
 	for i := 12; i < 18; i++ {
 		w[i] = 1
 	}
 	for i := 18; i < 36; i++ {
-		w[i] = math.Sin(math.Pi / 36 * (float64(i) + 0.5))
+		w[i] = float32(math.Sin(math.Pi / 36 * (float64(i) + 0.5)))
 	}
 	return w
 }
 
-func buildIMDCTLongTable() [36][18]float64 {
-	var table [36][18]float64
+func buildIMDCTLongTable() [36][18]float32 {
+	var table [36][18]float32
 	for n := range 36 {
 		for k := range 18 {
-			table[n][k] = math.Cos(math.Pi / 72 * float64((2*n+19)*(2*k+1)))
+			table[n][k] = float32(math.Cos(math.Pi / 72 * float64((2*n+19)*(2*k+1))))
 		}
 	}
 	return table
 }
 
-func buildIMDCTShortTable() [12][6]float64 {
-	var table [12][6]float64
+func buildIMDCTShortTable() [12][6]float32 {
+	var table [12][6]float32
 	for n := range 12 {
 		for k := range 6 {
-			table[n][k] = math.Cos(math.Pi / 24 * float64((2*n+7)*(2*k+1)))
+			table[n][k] = float32(math.Cos(math.Pi / 24 * float64((2*n+7)*(2*k+1))))
 		}
 	}
 	return table
@@ -87,8 +88,8 @@ func blockTypeForSubband(gc *common.GranuleChannelInfo, sb int) common.BlockType
 	return gc.GetBlockType()
 }
 
-func imdctLong(in []float64, blockType common.BlockType, out *[36]float64) {
-	var window *[36]float64
+func imdctLong(in []float32, blockType common.BlockType, out *[36]float32) {
+	var window *[36]float32
 	switch blockType {
 	case common.BlockTypeStart:
 		window = &startWindow
@@ -99,7 +100,7 @@ func imdctLong(in []float64, blockType common.BlockType, out *[36]float64) {
 	}
 
 	for n := range 36 {
-		sum := 0.0
+		var sum float32
 		for k := range 18 {
 			sum += in[k] * imdctLongTable[n][k]
 		}
@@ -107,11 +108,11 @@ func imdctLong(in []float64, blockType common.BlockType, out *[36]float64) {
 	}
 }
 
-func imdctShort(in []float64, out *[36]float64) {
+func imdctShort(in []float32, out *[36]float32) {
 	clear(out[:])
 	for win := 0; win < 3; win++ {
 		for n := 0; n < 12; n++ {
-			sum := 0.0
+			var sum float32
 			for k := 0; k < 6; k++ {
 				sum += in[3*k+win] * imdctShortTable[n][k]
 			}
@@ -120,7 +121,7 @@ func imdctShort(in []float64, out *[36]float64) {
 	}
 }
 
-func HybridSynthesis(gc *common.GranuleChannelInfo, values []float64, overlap *[32][18]float64, out *[32][18]float64) error {
+func HybridSynthesis(gc *common.GranuleChannelInfo, values []float32, overlap *[32][18]float32, out *[32][18]float32) error {
 	if gc == nil {
 		return fmt.Errorf("nil granule channel info")
 	}
@@ -135,7 +136,7 @@ func HybridSynthesis(gc *common.GranuleChannelInfo, values []float64, overlap *[
 	}
 
 	for sb := 0; sb < 32; sb++ {
-		var tmp [36]float64
+		var tmp [36]float32
 		subband := values[sb*18 : (sb+1)*18]
 		switch blockTypeForSubband(gc, sb) {
 		case common.BlockTypeShort:
