@@ -13,7 +13,7 @@ import byrd "github.com/kota-yata/byrd-mp3"
 
 Runnable examples are under [example/README.md](/Users/kota-yata/dev/repos/mp3/example/README.md).
 
-### Benchmark result at April 2026 with go-mp3 (archived)
+### Benchmark result as of v0.0.1 with go-mp3
 
 ```
 goos: darwin
