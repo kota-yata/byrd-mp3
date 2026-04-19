@@ -12,7 +12,23 @@ func main() {
 		log.Fatalf("usage: go run ./example/to_wav <input.mp3> <output.wav>")
 	}
 
-	if err := byrd.ConvertMP3FileToWAV(os.Args[1], os.Args[2]); err != nil {
+	f, err := os.Open(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	dec, err := byrd.NewDecoder(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	pcm, err := dec.Decode()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := pcm.WriteWAVFile(os.Args[2]); err != nil {
 		log.Fatal(err)
 	}
 }

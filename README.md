@@ -11,7 +11,29 @@ go get github.com/kota-yata/byrd-mp3
 import byrd "github.com/kota-yata/byrd-mp3"
 ```
 
-Runnable examples are under [example/README.md](/Users/kota-yata/dev/repos/mp3/example/README.md).
+```go
+f, err := os.Open("input.mp3")
+if err != nil {
+	log.Fatal(err)
+}
+defer f.Close()
+
+dec, err := byrd.NewDecoder(f)
+if err != nil {
+	log.Fatal(err)
+}
+
+pcm, err := dec.Decode()
+if err != nil {
+	log.Fatal(err)
+}
+
+if err := pcm.WriteWAVFile("output.wav"); err != nil {
+	log.Fatal(err)
+}
+```
+
+See examples under example/ for further usage.
 
 ### Benchmark result as of v0.0.1 with go-mp3
 
