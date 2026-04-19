@@ -1,11 +1,12 @@
 package bench
 
 import (
-	byrd "github.com/kota-yata/byrd-mp3"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+
+	byrd "github.com/kota-yata/byrd-mp3"
 
 	refmp3 "github.com/hajimehoshi/go-mp3"
 )
@@ -82,7 +83,18 @@ func mustStatBenchmarkFile(t testLogger, path string) int64 {
 }
 
 func decodeWithByrd(path string) (decodeResult, error) {
-	pcm, err := byrd.DecodeMP3File(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return decodeResult{}, err
+	}
+	defer f.Close()
+
+	dec, err := byrd.NewDecoder(f)
+	if err != nil {
+		return decodeResult{}, err
+	}
+
+	pcm, err := dec.Decode()
 	if err != nil {
 		return decodeResult{}, err
 	}
