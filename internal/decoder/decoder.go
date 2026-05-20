@@ -30,6 +30,7 @@ func OpenMP3File(path string) (io.ReadCloser, error) {
 func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 	var h header.MP3FrameHeader
 	var mainDataReservoir []byte
+	var sideInfoBuf []byte
 	var cur []byte
 	var mainData []byte
 	var scalefactors [2][2]maindata.Scalefactors
@@ -59,7 +60,14 @@ func DecodeMP3Frames(r *bufio.Reader) ([]int16, uint16, int, error) {
 		}
 
 		sideInfoLen := header.GetSideInfoLength(&h)
-		sideInfo, err := header.ReadSideInfo(&h, r, sideInfoLen)
+		if cap(sideInfoBuf) < sideInfoLen {
+			sideInfoBuf = make([]byte, sideInfoLen)
+		}
+		sideInfoBuf = sideInfoBuf[:sideInfoLen]
+		if _, err := io.ReadFull(r, sideInfoBuf); err != nil {
+			return nil, 0, 0, fmt.Errorf("failed to read side info: %w", err)
+		}
+		sideInfo, err := header.ReadSideInfo(&h, sideInfoBuf)
 		if err != nil {
 			return nil, 0, 0, fmt.Errorf("failed to read side info: %w", err)
 		}

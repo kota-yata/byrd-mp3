@@ -1,10 +1,9 @@
 package header
 
 import (
-	"bufio"
 	"fmt"
+
 	"github.com/kota-yata/byrd-mp3/internal/common"
-	"io"
 )
 
 type SideInfo = common.SideInfo
@@ -28,13 +27,7 @@ func GetSideInfoLength(h *MP3FrameHeader) int {
 	return 32
 }
 
-func ReadSideInfo(h *MP3FrameHeader, r *bufio.Reader, n int) (*SideInfo, error) {
-	buf := make([]byte, n)
-	_, err := io.ReadFull(r, buf)
-	if err != nil {
-		return nil, err
-	}
-
+func ReadSideInfo(h *MP3FrameHeader, buf []byte) (*SideInfo, error) {
 	if h.HasCRC() {
 		h.crcTarget = append(h.crcTarget, buf...)
 	}

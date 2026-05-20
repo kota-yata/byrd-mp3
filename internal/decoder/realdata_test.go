@@ -3,18 +3,19 @@ package decoder
 import (
 	"bufio"
 	"fmt"
-	"github.com/kota-yata/byrd-mp3/internal/common"
-	"github.com/kota-yata/byrd-mp3/internal/header"
-	"github.com/kota-yata/byrd-mp3/internal/hybrid"
-	"github.com/kota-yata/byrd-mp3/internal/maindata"
-	"github.com/kota-yata/byrd-mp3/internal/stereo"
-	"github.com/kota-yata/byrd-mp3/internal/synthesis"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/kota-yata/byrd-mp3/internal/common"
+	"github.com/kota-yata/byrd-mp3/internal/header"
+	"github.com/kota-yata/byrd-mp3/internal/hybrid"
+	"github.com/kota-yata/byrd-mp3/internal/maindata"
+	"github.com/kota-yata/byrd-mp3/internal/stereo"
+	"github.com/kota-yata/byrd-mp3/internal/synthesis"
 )
 
 // Just to make sure no error occurs when parsing bundled MP3 data.
@@ -66,6 +67,7 @@ func runParseRealDataTest(t *testing.T, path string) {
 
 	r := bufio.NewReader(f)
 	var mainDataReservoir []byte
+	var sideInfoBuf []byte
 	var cur []byte
 	var mainData []byte
 	frameIndex := 0
@@ -105,7 +107,15 @@ func runParseRealDataTest(t *testing.T, path string) {
 		}
 
 		sideInfoLen := header.GetSideInfoLength(&h)
-		sideInfo, err := header.ReadSideInfo(&h, r, sideInfoLen)
+		if cap(sideInfoBuf) < sideInfoLen {
+			sideInfoBuf = make([]byte, sideInfoLen)
+		}
+		sideInfoBuf = sideInfoBuf[:sideInfoLen]
+		_, err = io.ReadFull(r, sideInfoBuf)
+		if err != nil {
+			t.Fatalf("file=%s frame=%d: failed to read side info: %v", fileLabel, frameIndex, err)
+		}
+		sideInfo, err := header.ReadSideInfo(&h, sideInfoBuf)
 		if err != nil {
 			t.Fatalf("file=%s frame=%d: failed to read side info: %v", fileLabel, frameIndex, err)
 		}
