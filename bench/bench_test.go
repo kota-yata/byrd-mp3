@@ -31,6 +31,7 @@ func BenchmarkDecode(b *testing.B) {
 		filepath.Join("..", "static", "alarm.mp3"),
 		filepath.Join("..", "static", "song.mp3"),
 		filepath.Join("..", "static", "synth.mp3"),
+		filepath.Join("..", "static", "circle-reading.mp3"),
 	}
 	decoders := []struct {
 		name string

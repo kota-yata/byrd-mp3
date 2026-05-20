@@ -35,21 +35,23 @@ if err := pcm.WriteWAVFile("output.wav"); err != nil {
 
 See examples under example/ for further usage.
 
-### Benchmark result as of v0.1.0 with go-mp3
+### Benchmark result as of v0.1.1 with go-mp3
 
 ```
 goos: darwin
 goarch: arm64
 pkg: byrd-bench
 cpu: Apple M2
-BenchmarkDecode/byrd/440hz-8                   2         745993584 ns/op          1.07 MB/s     140336464 B/op     13509 allocs/op
-BenchmarkDecode/go-mp3/440hz-8                 1        1144709833 ns/op          0.70 MB/s     401723832 B/op    832098 allocs/op
-BenchmarkDecode/byrd/alarm-8                   4         311987406 ns/op          2.35 MB/s     46718656 B/op       4522 allocs/op
-BenchmarkDecode/go-mp3/alarm-8                 3         372543819 ns/op          1.97 MB/s     107437696 B/op    225285 allocs/op
-BenchmarkDecode/byrd/song-8                    1        1194510209 ns/op          3.47 MB/s     145807408 B/op     14918 allocs/op
-BenchmarkDecode/go-mp3/song-8                  1        1326219416 ns/op          3.12 MB/s     337330736 B/op    693343 allocs/op
-BenchmarkDecode/byrd/synth-8                   8         135744922 ns/op          2.26 MB/s     18730332 B/op       1899 allocs/op
-BenchmarkDecode/go-mp3/synth-8                 7         165773417 ns/op          1.85 MB/s     48806358 B/op     102876 allocs/op
+BenchmarkDecode/byrd/440hz-8                   2         772611416 ns/op           1.03 MB/s    140150616 B/op      7541 allocs/op
+BenchmarkDecode/go-mp3/440hz-8                 1        1162266375 ns/op           0.69 MB/s    401718448 B/op    832091 allocs/op
+BenchmarkDecode/byrd/alarm-8                   4         299168010 ns/op           2.45 MB/s    46667164 B/op       2912 allocs/op
+BenchmarkDecode/go-mp3/alarm-8                 3         372317639 ns/op           1.97 MB/s    107437728 B/op    225285 allocs/op
+BenchmarkDecode/byrd/song-8                    1        1205008584 ns/op           3.44 MB/s    145648976 B/op      9967 allocs/op
+BenchmarkDecode/go-mp3/song-8                  1        1365143459 ns/op           3.04 MB/s    337331008 B/op    693346 allocs/op
+BenchmarkDecode/byrd/synth-8                   8         136862448 ns/op           2.25 MB/s    18706784 B/op       1164 allocs/op
+BenchmarkDecode/go-mp3/synth-8                 7         167811369 ns/op           1.83 MB/s    48806390 B/op     102876 allocs/op
+BenchmarkDecode/byrd/circle-reading-8                  1        41794333000 ns/op          2.03 MB/s    6377618920 B/op   392295 allocs/op
+BenchmarkDecode/go-mp3/circle-reading-8                1        50479988500 ns/op          1.68 MB/s    14913809400 B/op        31594042 allocs/op
 ```
 
 ```
