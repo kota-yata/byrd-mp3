@@ -95,13 +95,14 @@ func decodeWithByrd(path string) (decodeResult, error) {
 		return decodeResult{}, err
 	}
 
-	pcm, err := dec.Decode()
+	raw, err := io.ReadAll(dec)
 	if err != nil {
 		return decodeResult{}, err
 	}
+	sampleCount := len(raw) / 2
 	return decodeResult{
-		decodedBytes: len(pcm.Samples) * 2,
-		samples:      len(pcm.Samples),
+		decodedBytes: len(raw),
+		samples:      sampleCount,
 	}, nil
 }
 
