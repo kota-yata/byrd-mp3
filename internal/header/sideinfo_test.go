@@ -1,8 +1,6 @@
 package header
 
 import (
-	"bufio"
-	"bytes"
 	"testing"
 )
 
@@ -113,8 +111,7 @@ func TestReadSideInfo_Stereo_NonWindowSwitching(t *testing.T) {
 		t.Fatalf("built side info length = %d, want 32", len(data))
 	}
 
-	r := bufio.NewReader(bytes.NewReader(data))
-	si, err := ReadSideInfo(&h, r, GetSideInfoLength(&h))
+	si, err := ReadSideInfo(&h, data)
 	if err != nil {
 		t.Fatalf("ReadSideInfo failed: %v", err)
 	}
@@ -191,8 +188,7 @@ func TestReadSideInfo_Stereo_WindowSwitching(t *testing.T) {
 		t.Fatalf("built side info length = %d, want 32", len(data))
 	}
 
-	r := bufio.NewReader(bytes.NewReader(data))
-	si, err := ReadSideInfo(&h, r, GetSideInfoLength(&h))
+	si, err := ReadSideInfo(&h, data)
 	if err != nil {
 		t.Fatalf("ReadSideInfo failed: %v", err)
 	}
@@ -267,8 +263,7 @@ func TestReadSideInfo_WindowSwitchingInvalidBlockType(t *testing.T) {
 		t.Fatalf("built side info length = %d, want %d", len(data), wantLen)
 	}
 
-	r := bufio.NewReader(bytes.NewReader(data))
-	_, err := ReadSideInfo(&h, r, GetSideInfoLength(&h))
+	_, err := ReadSideInfo(&h, data)
 	if err == nil {
 		t.Fatalf("expected error for invalid long block_type with window_switching, got nil")
 	}
