@@ -46,7 +46,7 @@ if err := pcmData.WriteWAVFile("output.wav"); err != nil {
 
 See examples under example/ for further usage.
 
-### Benchmark result as of v0.1.1 with go-mp3
+### Benchmark result as of v0.2.0 with go-mp3
 
 ```
 goos: darwin
