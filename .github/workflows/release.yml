@@ -1,0 +1,57 @@
+name: release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: release
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Create annotated tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          TARGET_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+
+          semver_regex='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+
+          if [[ ! "${PR_TITLE}" =~ ${semver_regex} ]]; then
+            echo "Merged pull request title must be a v-prefixed SemVer."
+            echo "Current title: ${PR_TITLE}"
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${PR_TITLE}" >/dev/null 2>&1; then
+            echo "Tag already exists: ${PR_TITLE}"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${PR_TITLE}" "${TARGET_SHA}" -m "${PR_TITLE}"
+          git push origin "refs/tags/${PR_TITLE}"
+
+          gh release create "${PR_TITLE}" \
+            --verify-tag \
+            --target "${TARGET_SHA}" \
+            --title "${PR_TITLE}" \
+            --generate-notes
+

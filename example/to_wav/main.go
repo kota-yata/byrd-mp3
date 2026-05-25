@@ -23,7 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pcm, err := dec.Decode()
+	pcm, err := dec.BatchDecode()
 	if err != nil {
 		log.Fatal(err)
 	}

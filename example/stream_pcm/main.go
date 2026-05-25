@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -24,12 +25,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pcm, err := dec.Decode()
+	raw, err := io.ReadAll(dec)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("sample_rate=%d\n", pcm.SampleRate)
-	fmt.Printf("channels=%d\n", pcm.Channels)
-	fmt.Printf("samples=%d\n", len(pcm.Samples))
+	fmt.Printf("sample_rate=%d\n", dec.SampleRate())
+	fmt.Printf("channels=%d\n", dec.Channels())
+	fmt.Printf("bytes=%d\n", len(raw))
 }

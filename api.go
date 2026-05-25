@@ -92,21 +92,38 @@ func (pcm *PCMData) WriteWAVFile(path string) error {
 }
 
 type Decoder struct {
-	r io.Reader
+	r *decoder.Reader
 }
 
 func NewDecoder(r io.Reader) (*Decoder, error) {
-	return &Decoder{r: r}, nil
+	return &Decoder{r: decoder.NewReader(bufio.NewReader(r))}, nil
 }
 
-func (d *Decoder) Decode() (*PCMData, error) {
-	samples, sampleRate, channels, err := decoder.DecodeMP3Frames(bufio.NewReader(d.r))
+func (d *Decoder) Read(p []byte) (int, error) {
+	return d.r.Read(p)
+}
+
+func (d *Decoder) SampleRate() uint16 {
+	return d.r.SampleRate()
+}
+
+func (d *Decoder) Channels() int {
+	return d.r.Channels()
+}
+
+func (d *Decoder) BatchDecode() (*PCMData, error) {
+	raw, err := io.ReadAll(d)
 	if err != nil {
 		return nil, err
 	}
+	samples := make([]int16, len(raw)/2)
+	for i := range samples {
+		j := i * 2
+		samples[i] = int16(uint16(raw[j]) | uint16(raw[j+1])<<8)
+	}
 	return &PCMData{
 		Samples:    samples,
-		SampleRate: sampleRate,
-		Channels:   channels,
+		SampleRate: d.SampleRate(),
+		Channels:   d.Channels(),
 	}, nil
 }
