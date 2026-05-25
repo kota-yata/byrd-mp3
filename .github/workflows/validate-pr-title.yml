@@ -1,0 +1,35 @@
+name: validate-pr-title
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate-pr-title:
+    name: validate-pr-title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title is a v-prefixed SemVer
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          semver_regex='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+
+          if [[ ! "${PR_TITLE}" =~ ${semver_regex} ]]; then
+            echo "Pull request title must be a v-prefixed SemVer, for example: v1.2.3, v1.2.3-rc.1, or v1.2.3+build.1"
+            echo "Current title: ${PR_TITLE}"
+            exit 1
+          fi
+
